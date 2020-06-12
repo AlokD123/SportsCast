@@ -33,7 +33,7 @@ class PlayerForecaster:
             self.currPlayer = None
             return None
         
-    def pred_points(self,player_name:str, num_games: int):
+    def pred_points(self,player_name:str, num_games: int, print_single_str=False):
         if not (self.currPlayer == player_name and (self.currModel is not None)):
             self.currModel = self.getPlayerModel(player_name)
         
@@ -43,10 +43,13 @@ class PlayerForecaster:
         prediction, interval = self.currModel.predict(n_periods=num_games, return_conf_int=True)
         assert len(prediction) == num_games, "Issue with model.predict inp/out dims"
 
-        string_resp = f'For the next {num_games}, the predicted running sum of points for {player_name} are: '
-        for i in range(num_games):
-            string_resp = string_resp + f'\n    Game {i}: {prediction[i]} (low: {interval[i,0]}, high:{interval[i,1]})'
-        return string_resp
+        if print_single_str:
+            string_resp = f'For the next {num_games} games, the predicted running sum of points for {player_name} are: '
+            for i in range(num_games):
+                string_resp = string_resp + f'\n    Game {i}: {prediction[i]:.2f} (lower bound: {interval[i,0]:.2f}, upper bound:{interval[i,1]:.2f})'
+            return string_resp
+        else:
+            return [f'Game {i}: {prediction[i]:.2f} (lower bound: {interval[i,0]:.2f}, upper bound:{interval[i,1]:.2f})' for i in range(num_games)]
 
 
 if __name__ == '__main__':
