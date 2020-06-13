@@ -1,24 +1,33 @@
 import api
 import pandas as pd
+import time
+import schedule
+from SavingReading import SavingReading
+import os
 
-def ingest_league_data(save_loc=None):
-    all_rosters = api.get_all_rosters(streamlit=False)
-    full_df = api.assemble_multiplayer_stat_dataframe(player_id_list=list(all_rosters.index), stat_list=[], boolAddSimulated=True)
-    if save_loc is None:
-        full_df.to_csv('./data/inputs/full_dataset.csv')
-    else:
-        full_df.to_csv(save_loc)
+#global PRJ_PATH =
 
-def ingest_new_league_data():
-    pass
+class DataIngestion:
 
-def load_some_data(save_loc=None):
-    season_id, season_start, season_end = api.get_current_season()
-    df = pd.DataFrame({"season_id":season_id,"season_start":season_start,"season_end":season_end})
-    if save_loc is None:
-        df.to_csv('./data/inputs/some_data.csv')
-    else:
-        df.to_csv(save_loc)
+    def __init__(self):
+        self.saver_reader = SavingReading()
+        
+    def load_some_data(self,save_path=None,save_name=None):
+        season_id, season_start, season_end = api.get_current_season()
+        df = pd.DataFrame({"season_id":season_id,"season_start":season_start,"season_end":season_end})
+        if (save_path is None) or (save_name is None):
+            save_path = PRJ_PATH + "/" + 'data/inputs'
+            save_name = 'some_data.csv'
+        self.saver_reader.save(df,save_name,save_path)
+        
 
-if __name__=="__main__":
-    load_some_data('./data/inputs/some_data.csv')
+    def ingest_league_data(self,save_path=None,save_name=None):
+        all_rosters = api.get_all_rosters(streamlit=False)
+        full_df = api.assemble_multiplayer_stat_dataframe(player_id_list=list(all_rosters.index), stat_list=[], boolAddSimulated=True)
+        if (save_path is None) or (save_name is None):
+            save_path = PRJ_PATH + "/" + 'data/inputs'
+            save_name = 'some_data.csv'
+        self.saver_reader.save(full_df,save_name,save_path)
+            
+    def ingest_new_league_data(self):
+        pass

@@ -13,6 +13,7 @@ class PlayerForecaster:
         self.models_path = models_path
         self.all_model_results = None
 
+        #TODO: fix logic for path=None or path=absent
         if models_path is not None:
             self.load_all_models(models_path)
 
@@ -34,6 +35,7 @@ class PlayerForecaster:
             return None
         
     def pred_points(self,player_name:str, num_games: int, print_single_str=False):
+        #TODO: add test for self.currModel is None
         if not (self.currPlayer == player_name and (self.currModel is not None)):
             self.currModel = self.getPlayerModel(player_name)
         
