@@ -6,6 +6,11 @@ import pdb
 
 usePDB = True
 
+def reshape_arr_vertical(arr):
+    if arr.shape[0] < arr.shape[1]:
+        arr = np.transpose(arr)
+    return arr
+
 class Model(ABC):
     def __init__(self):
         pass
@@ -39,6 +44,8 @@ class Model(ABC):
                 if usePDB:
                     pdb.set_trace()
                 return None
+            dyn_cat_features = reshape_arr_vertical(np.array(dyn_cat_features))
+            dyn_real_features = reshape_arr_vertical(np.array(dyn_real_features))
             try:
                 player_features = np.hstack( ( np.array(dyn_cat_features), np.array(dyn_real_features) ) ) #Try to concatenate
             except ValueError:
