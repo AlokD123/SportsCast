@@ -1,16 +1,17 @@
 from Model import Model
 import pmdarima as pm
+import pdb
+
+usePDB=True
 
 
 class ARIMA(Model): #TODO: decide if inherit Model or pmdarima ARIMA class
 
-    def __init__(self,player_trn_ds,use_exog_feats=False,model=None,player_name=None):
+    def __init__(self,player_train_labels,features_trn=None,model=None,player_name=None):
         super().__init__()
-        self.player_name = player_name
-        self.use_exog_feats = use_exog_feats
-        ret = Model.decomposeDS(player_trn_ds,use_exog_feats)
-        assert ret is not None, f"Failed to create ARIMA for {self.player_name}"
-        player_train_labels, features_trn = ret
+        self.player_name = player_name if player_name is not None else "NoName"
+        self.use_exog_feats = False if features_trn is None  else True
+        
         if model is None:
             self.model = self.create(player_train_labels=player_train_labels,features_trn=features_trn)
         else:
@@ -38,6 +39,7 @@ class ARIMA(Model): #TODO: decide if inherit Model or pmdarima ARIMA class
                                 out_of_sample_size=int(0.1*len(player_train_labels)), #Validation set size
                                 scoring='mae')
 
+        self.fit(player_train_labels,features_trn=features_trn)
         return model
 
     def preprocess(self,player_train_labels):
@@ -57,25 +59,29 @@ class ARIMA(Model): #TODO: decide if inherit Model or pmdarima ARIMA class
         '''
         return player_train_labels
 
-    def fit(self,player_name):
+    def fit(self,player_train_labels,features_trn=None):
         print('Model built, fitting...')
         try:
-            self.model.fit()
+            self.model.fit(player_train_labels,features_trn)
             return self
         except ValueError:
-            print(f"{player_name} doesn't have enough data for fitting ARIMA!")
+            print(f"{self.player_name} doesn't have enough data for fitting ARIMA!")
             return None
         except IndexError:
-            print(f'Index error in fitting ARIMA for {player_name}')
+            print(f'Index error in fitting ARIMA for {self.player_name}')
             return None
         except Exception as err:
-            print(f'Other error in fitting ARIMA for {player_name}:{err}')
+            print(f'Other error in fitting ARIMA for {self.player_name}:{err}')
             return None
     
 
     #TODO: add boolPredictInsample option
-    def predict(self,n_periods:int,return_conf_int:bool=True):
-        ret = self.model.predict(n_periods=n_periods, return_conf_int=return_conf_int)
+    def predict(self,n_periods:int,return_conf_int:bool=True,exogenous=None):
+        if self.use_exog_feats and exogenous is None:
+            print(f'Missing exogenous features for prediction')
+            return None
+        exogenous = None if exogenous is None else exogenous.reshape(n_periods,-1)
+        ret = self.model.predict(n_periods=n_periods, return_conf_int=return_conf_int, exogenous=exogenous)
         if return_conf_int:
             prediction, interval = ret
         else:
@@ -127,14 +133,19 @@ class ARIMA(Model): #TODO: decide if inherit Model or pmdarima ARIMA class
     def evaluate(self):
         pass
 
-    #TODO: decide if updating as vector target, or sequentially over scalars targ
-    def update(self,new_list_ds):
-        ret = Model.decomposeDS(new_list_ds,self.use_exog_feats)
-        assert ret is not None, f"Failed to update ARIMA for {self.player_name}"
-        new_targets, exog_feats = ret
-        if exog_feats is not None:
-            for targ, exog in zip(new_targets,exog_feats):
-                self.model.update(targ,exogenous=exog)
-        else:
-            for targ, exog in new_targets,exog_feats:
-                self.model.update(targ)
+    
+    def update(self,player_dict:dict):
+        try:
+            ret = Model.decomposeListDS_dict(player_dict,self.use_exog_feats)
+            assert ret is not None, f"Failed to update ARIMA for {self.player_name}"
+            new_targets, exog_feats = ret
+            if exog_feats is not None:
+                for targ, exog in zip(new_targets,exog_feats): #TODO: decide if updating sequentially over scalars targ (current), or as target vector
+                    self.model.update(targ,exogenous=exog.reshape(1,-1))
+            else:
+                for targ in new_targets:
+                    self.model.update(targ)
+        except AssertionError as err:
+            print(f'{err}')
+            if usePDB:
+                    pdb.set_trace()
