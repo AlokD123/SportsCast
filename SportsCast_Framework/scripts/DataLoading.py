@@ -1,4 +1,3 @@
-
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 import copy
@@ -17,11 +16,12 @@ UPDATED_DATA_DIR = PRJ_PATH + "/data/inputs"
 UPDATED_DATA_FILENAME = "full_dataset_updated"  #.csv
 ROSTER_DIR = PRJ_PATH + "/data/inputs"
 ROSTER_FILENAME = "full_roster_4_seasons"       #.csv
-TRAIN_TEST_DS_DIR = PRJ_PATH + "/data/train_test_ds"
+RETRAIN_DS_DIR = PRJ_PATH + "/data/retrain_ds"
+RETRAIN_DS_FILENAME = "retrain_ds_all"          #.p
 TRAIN_DS_DIR = PRJ_PATH + "/data/train_ds"
 TRAIN_DS_FILENAME = "train_ds_all"              #.p
 TEST_DS_DIR = PRJ_PATH + "/data/test_ds"
-TRAIN_DS_FILENAME = "test_ds_all"               #.p
+TEST_DS_FILENAME = "test_ds_all"               #.p
 MODELRESULT_DIR = PRJ_PATH + "/data/outputs"
 MODELRESULT_FILENAME = "arima_results"          #.p     #Join model type (arima or deepar) string as well as hparam string to this
 '''
@@ -46,6 +46,7 @@ def generate_list_ds(data, targets, targets_meta, targets_raw, stat_cat_features
 
 def load_data_listDS(data,
                     full_save_dir,
+                    fname_params_sffix,
                     boolSplitTrainTest,
                     index='date',
                     feature='cumStatpoints',
@@ -107,8 +108,8 @@ def load_data_listDS(data,
         test_list_ds = generate_list_ds(test,targets_test, targets_meta_test, targets_raw_test, stat_cat_features_test, dyn_cat_features_test, dyn_real_features_test, dyn_real_features_meta_test, player_names, boolTransformed=boolTransformed)
 
         if boolSave:
-            saver_reader.save(train_list_ds,"all_players_trn_ds",full_save_dir,bool_save_s3=False)
-            saver_reader.save(test_list_ds,"all_players_test_ds",full_save_dir,bool_save_s3=False)
+            saver_reader.save(train_list_ds,"train_ds_all",full_save_dir,bool_save_s3=False)
+            saver_reader.save(test_list_ds,"test_ds_all",full_save_dir,bool_save_s3=False)
 
         return train_list_ds, test_list_ds
     else:
@@ -119,7 +120,7 @@ def load_data_listDS(data,
 
         list_ds = generate_list_ds(data, targets, targets_meta, targets_raw, stat_cat_features, dyn_cat_features, dyn_real_features, dyn_real_features_meta, player_names, boolTransformed=boolTransformed)
         if boolSave:
-            saver_reader.save(list_ds,"all_players_ds",full_save_dir,bool_save_s3=False)
+            saver_reader.save(list_ds,"retrain_ds_all",full_save_dir,bool_save_s3=False)
 
         return list_ds
 
@@ -127,7 +128,7 @@ def load_data_listDS(data,
 
 
 #TODO: move use_exog_feat to TrainEvaluate.py
-def load_data_main(data_path,roster_path,full_save_dir, boolSplitTrainTest, \
+def load_data_main(data_path,roster_path,full_save_dir, fname_params_sffix, boolSplitTrainTest, \
                     use_exog_feat=False, boolTransformed=False, boolSave=False, \
                     column_list = ['date', 'name', 'gameNumber', 'cumStatpoints'], stand=False, \
                     scale=True, index='date',feature='cumStatpoints',forecast_from='2018-10-03'):
@@ -138,9 +139,10 @@ def load_data_main(data_path,roster_path,full_save_dir, boolSplitTrainTest, \
         data = preprocessing(data)
         
         ret = load_data_listDS(data=data,roster=full_roster, use_exog_feat=use_exog_feat, stand=stand, \
-                                boolTransformed=boolTransformed, boolSave=boolSave, full_save_dir=full_save_dir, \
+                                boolTransformed=boolTransformed, boolSave=boolSave, \
                                 column_list=column_list,scale=scale,index=index,feature=feature, \
-                                forecast_from=forecast_from,boolSplitTrainTest=boolSplitTrainTest)
+                                forecast_from=forecast_from,boolSplitTrainTest=boolSplitTrainTest, \
+                                full_save_dir=full_save_dir, fname_params_sffix=fname_params_sffix)
         assert ret is not None, f"Could not load data"
         if boolSplitTrainTest:
             train_list_ds, test_list_ds = ret
@@ -152,3 +154,12 @@ def load_data_main(data_path,roster_path,full_save_dir, boolSplitTrainTest, \
     except AssertionError as err:
         print(f'Error in loading data: {err}')
         return None
+
+
+#CREATE A TRAINING SET HERE
+if __name__=="__main__":
+    trn_params_sfx = "" #TODO
+    load_data_main(DATA_DIR+DATA_FILENAME+".csv",ROSTER_DIR+ROSTER_FILENAME+".csv",TRAIN_DS_DIR, fname_params_sffix=trn_params_sfx, \
+                    boolSplitTrainTest=True, use_exog_feat=True, boolTransformed=False, boolSave=True, \
+                    column_list = ['date', 'name', 'gameNumber', 'cumStatpoints'], stand=False, \
+                    scale=True, index='date',feature='cumStatpoints',forecast_from='2018-10-03')
