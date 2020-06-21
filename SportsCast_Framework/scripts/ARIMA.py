@@ -1,8 +1,9 @@
 from Model import Model
 import pmdarima as pm
 import pdb
+import logging
 
-usePDB=True
+usePDB = True
 
 
 class ARIMA(Model): #TODO: decide if inherit Model or pmdarima ARIMA class
@@ -16,6 +17,12 @@ class ARIMA(Model): #TODO: decide if inherit Model or pmdarima ARIMA class
             self.model = self.create(player_train_labels=player_train_labels,features_trn=features_trn)
         else:
             self.model = model
+
+        #TODO: use hyperparameters to implement pre/postprocessing below
+        #self.transform = transform
+        #self.standardize = stand
+        #self.scale = scale
+        #self.transformer = None
 
     #TODO: make hparams tunable
     def create(self,player_train_labels,features_trn=None):
@@ -39,10 +46,10 @@ class ARIMA(Model): #TODO: decide if inherit Model or pmdarima ARIMA class
                                 out_of_sample_size=int(0.1*len(player_train_labels)), #Validation set size
                                 scoring='mae')
 
-        self.fit(player_train_labels,features_trn=features_trn)
+        model = self.fit(player_train_labels,features_trn=features_trn,model=model)
         return model
 
-    def preprocess(self,player_train_labels):
+    def preprocess(self,player_train_labels): #self.transformer, transform, stand, scale
         #TODO: decide if moving to Preprocessing.py
         '''
         if transform == 'log':
@@ -59,26 +66,30 @@ class ARIMA(Model): #TODO: decide if inherit Model or pmdarima ARIMA class
         '''
         return player_train_labels
 
-    def fit(self,player_train_labels,features_trn=None):
-        print('Model built, fitting...')
+    def fit(self,player_train_labels,features_trn=None,model=None):
+        logging.info('Model built, fitting...')
         try:
-            self.model.fit(player_train_labels,features_trn)
-            return self
+            if model is not None:
+                model.fit(player_train_labels,features_trn)
+                return model
+            else:
+                self.model.fit(player_train_labels,features_trn)
+                return self
         except ValueError:
-            print(f"{self.player_name} doesn't have enough data for fitting ARIMA!")
+            logging.error(f"{self.player_name} doesn't have enough data for fitting ARIMA!")
             return None
         except IndexError:
-            print(f'Index error in fitting ARIMA for {self.player_name}')
+            logging.error(f'Index error in fitting ARIMA for {self.player_name}')
             return None
         except Exception as err:
-            print(f'Other error in fitting ARIMA for {self.player_name}:{err}')
+            logging.error(f'Other error in fitting ARIMA for {self.player_name}:{err}')
             return None
     
 
     #TODO: add boolPredictInsample option
     def predict(self,n_periods:int,return_conf_int:bool=True,exogenous=None):
         if self.use_exog_feats and exogenous is None:
-            print(f'Missing exogenous features for prediction')
+            logging.warning(f'Missing exogenous features for prediction')
             return None
         exogenous = None if exogenous is None else exogenous.reshape(n_periods,-1)
         ret = self.model.predict(n_periods=n_periods, return_conf_int=return_conf_int, exogenous=exogenous)
@@ -90,6 +101,7 @@ class ARIMA(Model): #TODO: decide if inherit Model or pmdarima ARIMA class
 
     def postprocess(self,train_predictions=None, predictions=None, intervals=None):
         #TODO: clean up
+        #TODO: postprocess for scale/stand
         #ppSeries = list()
         '''
         if train_predictions is not None:
@@ -139,13 +151,33 @@ class ARIMA(Model): #TODO: decide if inherit Model or pmdarima ARIMA class
             ret = Model.decomposeListDS_dict(player_dict,self.use_exog_feats)
             assert ret is not None, f"Failed to update ARIMA for {self.player_name}"
             new_targets, exog_feats = ret
-            if exog_feats is not None:
+            if exog_feats is True:
                 for targ, exog in zip(new_targets,exog_feats): #TODO: decide if updating sequentially over scalars targ (current), or as target vector
                     self.model.update(targ,exogenous=exog.reshape(1,-1))
             else:
                 for targ in new_targets:
                     self.model.update(targ)
         except AssertionError as err:
-            print(f'{err}')
+            logging.error(f'{err}')
             if usePDB:
                     pdb.set_trace()
+
+    #Needed to supported legacy non-ARIMA class PMDARIMA models
+    @classmethod
+    def update_PMDARIMA(cls,model:pm.ARIMA,player_dict:dict,use_exog_feats:bool=True,player_name:str='NoName'):
+        try:
+            ret = Model.decomposeListDS_dict(player_dict,use_exog_feats)
+            assert ret is not None, f"Failed to update ARIMA for {player_name}"
+            new_targets, exog_feats = ret
+            if exog_feats is not None:
+                for targ, exog in zip(new_targets,exog_feats): #TODO: decide if updating sequentially over scalars targ (current), or as target vector
+                    model.update(targ,exogenous=exog.reshape(1,-1))
+            else:
+                for targ in new_targets:
+                    model.update(targ)
+            return model, new_targets, exog_feats
+        except AssertionError as err:
+            logging.error(f'{err}')
+            if usePDB:
+                    pdb.set_trace()
+            return None
