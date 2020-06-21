@@ -4,6 +4,7 @@ from ARIMA import ARIMA
 from gluonts.dataset.field_names import FieldName
 from gluonts.dataset.common import ListDataset
 import pdb
+import logging
 
 usePDB=True
 
@@ -58,7 +59,7 @@ class MultiARIMA(Model):
             player_name = player_dict['name']                           
             ret = Model.decomposeListDS_dict(player_dict,use_exog_feat)                 #Get player's training data
             if ret is None:
-                print(f"Failed to create ARIMA for {player_name}")
+                logging.warning(f"Failed to create ARIMA for {player_name}")
                 continue
             player_train_labels, features_trn = ret
             #Create Model-class instance of class ARIMA and store
@@ -71,21 +72,15 @@ class MultiARIMA(Model):
     #NOT NEEDED because done during initialization for each player
     def fit(self):
         pass
-        '''
-        for player_name in self.player_names:
-            self.models_results_df.loc[player_name,"model"] = self.models_results_df.loc[player_name,"model"].fit()
-            #player_mdl.fit()
-        '''
 
     def predict(self,predict_ds_all:ListDataset,return_conf_int:bool=True):
-        pdb.set_trace()
         for player_dict in predict_ds_all:
             n_periods = len(player_dict[FieldName.TARGET])
             player_name = player_dict['name']
             player_mdl = self.models_results_df.loc[player_name,"model"]
             ret = Model.decomposeListDS_dict(player_dict,use_exog_feats=player_mdl.use_exog_feats)
             if ret is None:
-                print(f"Failed to perform prediction for {player_name}")
+                logging.warning(f"Failed to perform prediction for {player_name}")
                 continue
             actual_targets, features_predict = ret
             ret = player_mdl.predict(n_periods=n_periods,return_conf_int=return_conf_int,exogenous=features_predict)
@@ -117,6 +112,6 @@ class MultiARIMA(Model):
     def evaluate(self):
         pass
 
-    #Unused, since updates will be done model-by-model during retraining?
+    #Unused, since updates will be done model-by-model during retraining
     def update(self,new_data_ds,exog_feats=None):
         pass

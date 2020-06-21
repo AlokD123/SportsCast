@@ -19,7 +19,7 @@ TRAIN_DS_DIR = PRJ_PATH + "/data/train_ds"
 TRAIN_DS_FILENAME = "train_ds_all"              #.p
 TEST_DS_DIR = PRJ_PATH + "/data/test_ds"
 TEST_DS_FILENAME = "test_ds_all"               #.p
-MODELRESULT_DIR = PRJ_PATH + "/data/outputs"
+MODELRESULT_DIR = PRJ_PATH + "/data/models"
 MODELRESULT_FILENAME = "arima_results"          #.p     #Join model type (arima or deepar) string as well as hparam string to this
 '''
 #TODO: change "arima_results" to "model_results"

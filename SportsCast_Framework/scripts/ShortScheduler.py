@@ -3,7 +3,6 @@ import os, time
 from timeloop import Timeloop
 from datetime import timedelta
 
-#import schedule
 tl = Timeloop()
 
 def data_received():
