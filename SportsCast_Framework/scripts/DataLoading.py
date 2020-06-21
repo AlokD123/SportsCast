@@ -30,7 +30,7 @@ MODELRESULT_FILENAME = "arima_results"          #.p     #Join model type (arima 
 
 
 
-class DataLoader:
+class DataLoading:
     def __init__(self,saver_reader=None):
         self.saver_reader = saver_reader if saver_reader is not None else SavingReading()
 

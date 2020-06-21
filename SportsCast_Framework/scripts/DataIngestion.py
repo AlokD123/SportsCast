@@ -1,4 +1,4 @@
-import api
+import api as api
 import pandas as pd
 import time
 from SavingReading import SavingReading
