@@ -80,14 +80,14 @@ class SavingReading:
             logging.error(f'Couldn\'t save. Error pickling object: {err}')
             return None
 
-    def save(self,obj,save_name:str,full_save_dir:str, bool_save_s3=False):
+    def save(self,obj,save_name:str,full_save_dir:str, bool_save_pickle=False, bool_save_s3=False):
         logging.debug(f"Arguments:\nsave_name={save_name},\nfull_save_dir={full_save_dir},\nbool_save_s3={bool_save_s3}")
         if bool_save_s3:
             ret = self.save_to_s3(obj,save_name,full_save_dir)
             if ret is True:
                 logging.info(f'Saved {full_save_dir+save_name} to S3 with appropriate extension')
             return  
-        elif isinstance(obj,pd.DataFrame):
+        elif isinstance(obj,pd.DataFrame) and not bool_save_pickle:
             ret = self.save_df_to_csv(obj,save_name,full_save_dir)
             logging.info(f'Saved {full_save_dir+save_name+".csv"} to local disk')
             return ret
@@ -152,7 +152,9 @@ class SavingReading:
         try: 
             df = pd.read_csv(full_read_dir + "/" + read_name + ".csv")
             if 'Unnamed: 0' in df.columns:
-                df = df.drop(columns=['Unnamed: 0'])
+                #df = df.drop(columns=['Unnamed: 0'])
+                df = df.set_index('Unnamed: 0')
+                df.index.name = None
             return df
         except Exception as err:
             logging.error(f'Error: {err}')

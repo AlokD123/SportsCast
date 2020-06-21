@@ -6,9 +6,10 @@ from gluonts.dataset.field_names import FieldName
 from gluonts.dataset.common import ListDataset
 from SavingReading import SavingReading
 
-from DataLoading import *
-from DataIngestion import *
+from DataLoading import DataLoading
+from DataIngestion import DataIngestion
 
+import logging
 import pdb
 
 #ENVIRONMENT VARIABLES
@@ -46,13 +47,13 @@ class PlayerForecaster:
         self.all_model_results_df = None
         self.saver_reader = SavingReading()
         self.ingestor = DataIngestion(initial_ingestion=False,saver_reader=self.saver_reader)
-        self.data_loader = DataLoader(saver_reader=self.saver_reader)
+        self.data_loader = DataLoading(saver_reader=self.saver_reader)
 
         assert self.saver_reader is not None, "Failed to create a saver-reader"
 
         #TODO: fix logic for path=None or path=absent
         if models_dir is not None and models_filename is not None:
-            assert self.load_all_models(models_dir=models_dir,models_filename=models_filename) is True, "Failed to create PlayerForecaster"
+            assert self.load_all_models(models_dir=models_dir,models_filename=models_filename,load_pickled=True) is True, "Failed to create PlayerForecaster"
 
     #TODO: update default to use ENV VARIABLES
     #def load_all_models(self,models_dir=os.getcwd()+'/data/outputs',models_fname="arima_results_m3_fourStep_noFeatures.p"):
@@ -85,7 +86,7 @@ class PlayerForecaster:
                     models_filename:str="model_results",print_single_str=False):                            #TODO: override with hparams suffix from CLI arg
         #TODO: add test for self.currModel is None
         if self.all_model_results_df is None:
-            if not self.load_all_models(models_dir=models_dir,models_filename=models_filename):
+            if not self.load_all_models(models_dir=models_dir,models_filename=models_filename,load_pickled=True):
                 return "No model available for prediction"
         if not (self.currPlayer == player_name and (self.currModel is not None)):
             self.currModel = self.getPlayerModel(player_name)
@@ -143,7 +144,7 @@ class PlayerForecaster:
 
                     #Overwrite df
                     logging.info('Overwriting df after retraining')
-                    self.saver_reader.save(self.all_model_results_df,models_fname+hparams,models_dir,bool_save_s3=False)
+                    self.saver_reader.save(self.all_model_results_df,models_fname+hparams,models_dir,bool_save_pickle=True,bool_save_s3=False)
                     return player_mdl
 
             except AssertionError as err:
