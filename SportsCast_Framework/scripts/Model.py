@@ -3,6 +3,7 @@ from gluonts.dataset.field_names import FieldName
 from gluonts.dataset.common import ListDataset
 import numpy as np
 import pdb
+import logging
 
 usePDB = True
 
@@ -40,7 +41,7 @@ class Model(ABC):
                 assert len(dyn_real_features)>0, "Missing dyn_real_features"
                 assert len(dyn_real_features)>0, "Missing dyn_cat_features"
             except AssertionError as err:
-                print(f'Error in decomposing DS: {err}')
+                logging.error(f'Error in decomposing DS: {err}')
                 if usePDB:
                     pdb.set_trace()
                 return None
@@ -54,9 +55,9 @@ class Model(ABC):
                 except Exception as err:
                     raise Exception(f"{err}")
             except Exception as err:
-                print(f'Error in decomposing DS: couldnt concatenate feature arrays: {err}')
-                print(f'\ndyn_cat_features: {np.array(dyn_cat_features)}. Shape: {np.array(dyn_cat_features).shape}')
-                print(f'\ndyn_real_features: {np.array(dyn_real_features)}. Shape: {np.array(dyn_real_features).shape}')
+                logging.error(f'Error in decomposing DS: couldnt concatenate feature arrays: {err}')
+                logging.error(f'\ndyn_cat_features: {np.array(dyn_cat_features)}. Shape: {np.array(dyn_cat_features).shape}')
+                logging.error(f'\ndyn_real_features: {np.array(dyn_real_features)}. Shape: {np.array(dyn_real_features).shape}')
                 if usePDB:
                     pdb.set_trace()
                 return None
