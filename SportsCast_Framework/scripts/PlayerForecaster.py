@@ -164,7 +164,9 @@ class PlayerForecaster:
         all_rosters, new_full_df = self.ingestor.ingest_new_league_data(roster_name=roster_fname,roster_dir=roster_dir,save_dir=updated_data_dir,save_name=updated_data_fname, \
                                                                         old_read_dir=old_ingest_dir,old_read_name=old_ingest_name,new_read_dir=new_ingest_dir,new_read_name=new_ingest_name)
 
-        assert len(new_full_df)>0, 'New ingestion not working'
+        if len(new_full_df)==0:
+            logging.warning(f'No new data to retrain')
+            return False
 
         retrn_params_sfx = "" #TODO
         new_list_ds = self.data_loader.load_data_main(data_dir=updated_data_dir, data_fname=updated_data_fname, \
@@ -174,14 +176,14 @@ class PlayerForecaster:
                                                         boolSave=True, stand=False, scale=False, \
                                                         fname_params_sffix=retrn_params_sfx)
         
-        if new_list_ds is None:
-            logging.warning(f'Couldnt retrain')
-            return None
+        if new_list_ds is None or len(new_list_ds.list_data)==0:
+            logging.error(f'Couldnt retrain. Data loading not working')
+            return False
         else:
-            assert len(new_list_ds.list_data)>0, "Loading not working"
             logging.debug('Starting retraining with the following:\n')
             logging.debug(new_list_ds.list_data)
-            return self.retrain(hparams=hparams,retrain_ds_all_players=new_list_ds,models_dir=models_dir,models_fname=models_fname,use_exog_feats=use_exog_feats) #TODO: Add options for non-default re-train save location
+            self.retrain(hparams=hparams,retrain_ds_all_players=new_list_ds,models_dir=models_dir,models_fname=models_fname,use_exog_feats=use_exog_feats) #TODO: Add options for non-default re-train save location
+            return True
 
 if __name__ == '__main__':
     fire.Fire(PlayerForecaster)
