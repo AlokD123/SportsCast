@@ -1,6 +1,8 @@
 import pandas as pd
 import os
 import logging
+import fire
+import pdb
 
 from PlayerForecaster import PlayerForecaster
 
@@ -28,18 +30,19 @@ def create_service(models_dir:str=os.getcwd()+"/data/models", models_fname:str="
     try:
         # 1) create a model
         pf = PlayerForecaster(models_dir=models_dir,models_filename=models_fname)
+        assert pf is not None, "Failed to create forecaster"
 
         # 2) `pack` the service with the model
         bento_service = Forecast_Service()
         bento_service.pack('model', pf)
 
-        # 3) save  BentoSerivce to file archive
-        saved_path = bento_service.save_to_dir(bento_dir)
+        # 3) save  BentoService to file archive
+        saved_path = bento_service.save(bento_dir)
 
         return True
     except Exception as err:
         logging.error(f'Could not create service:{err}')
         return False
 
-if __name__=="__main__":
-    create_service()
+if __name__ == '__main__':
+    fire.Fire(create_service)
