@@ -1,16 +1,16 @@
-from DataIngestion import *
 import os, time
 import schedule
 
-def receive_data():
-    print('Collecting new data')
+def retrain_attempt():
+    print('Checking for new data to retrain model')
     os.system("pkill bentoml")
-    load_some_data()
-    os.system("bentoml serve /home/ubuntu/bentoml/repository/Forecast_Service/20200611163906_07ECBA &")
+    os.system("python3 SportsCast_Framework/scripts/PlayerForecaster.py retrain_main --hparams='' --new_ingest_name='full_dataset_added_sim-data-10_chara' --models_fname='arima_results_m3_fourStep_noFeatures' --use_exog_feats=False")
+    os.system("python3 /home/ubuntu/InsightPrj_BentoML/Infer_Serve.py") #TODO: update
+    os.system("bentoml serve Forecast_Service:latest &")
 
 if __name__=="__main__":
-    os.system("bentoml serve /home/ubuntu/bentoml/repository/Forecast_Service/20200611163906_07ECBA &")
-    schedule.every(1).minutes.do(receive_data)
+    os.system("bentoml serve Forecast_Service:latest &")
+    schedule.every(1).minutes.do(retrain_attempt)
     while True:
         schedule.run_pending()
         time.sleep(1)
