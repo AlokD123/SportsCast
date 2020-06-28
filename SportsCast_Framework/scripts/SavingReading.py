@@ -86,7 +86,7 @@ class SavingReading:
             ret = self.save_to_s3(obj,save_name,full_save_dir)
             if ret is True:
                 logging.info(f'Saved {full_save_dir+save_name} to S3 with appropriate extension')
-            return  
+            return ret
         elif isinstance(obj,pd.DataFrame) and not bool_save_pickle:
             ret = self.save_df_to_csv(obj,save_name,full_save_dir)
             logging.info(f'Saved {full_save_dir+save_name+".csv"} to local disk')

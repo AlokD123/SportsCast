@@ -38,7 +38,6 @@ from ARIMA import ARIMA
 import pmdarima as pm       #Only needed here to support legacy saved models. Should remove otherwise to again make module opaque
 
 class PlayerForecaster:
-    #TODO: replace models_path with models_dir, models_filename
     def __init__(self,models_dir=None,models_filename=None):
         self.currPlayer = None
         self.currModel = None
@@ -87,24 +86,25 @@ class PlayerForecaster:
         #TODO: add test for self.currModel is None
         if self.all_model_results_df is None:
             if not self.load_all_models(models_dir=models_dir,models_filename=models_filename,load_pickled=True):
-                return "No model available for prediction"
+                return "No model available for predictions"
         if not (self.currPlayer == player_name and (self.currModel is not None)):
             self.currModel = self.getPlayerModel(player_name)
         
         if self.currModel == None:
             return "No such player found"
 
-        prediction, interval = self.currModel.predict(n_periods=num_games, return_conf_int=True)
-        #TODO: postprocess here?
-        assert len(prediction) == num_games, "Issue with model.predict inp/out dims"
+        predictions, intervals = self.currModel.predict(n_periods=num_games, return_conf_int=True)
+        if not isinstance(self.currModel,pm.ARIMA):
+            __, predictions, low_intervals, high_intervals = self.currModel.postprocess(train_predictions=None, predictions=predictions, intervals=intervals)
+        assert len(predictions) == num_games, "Issue with model.predict inp/out dims"
 
         if print_single_str:
             string_resp = f'For the next {num_games} games, the predicted running sum of points for {player_name} are: '
             for i in range(num_games):
-                string_resp = string_resp + f'\n    Game {i}: {prediction[i]:.2f} (lower bound: {interval[i,0]:.2f}, upper bound:{interval[i,1]:.2f})'
+                string_resp = string_resp + f'\n    Game {i}: {predictions[i]:.2f} (lower bound: {low_intervals[i]:.2f}, upper bound:{high_intervals[i]:.2f})'
             return string_resp
         else:
-            return [f'Game {i}: {prediction[i]:.2f} (lower bound: {interval[i,0]:.2f}, upper bound:{interval[i,1]:.2f})' for i in range(num_games)]
+            return [f'Game {i}: {predictions[i]:.2f} (lower bound: {low_intervals[i]:.2f}, upper bound:{high_intervals[i]:.2f})' for i in range(num_games)]
 
 
     #def retrain(self,hparams:str,retrain_ds_all_players:ListDataset,models_dir:str=MODELRESULT_DIR,models_fname:str=MODELRESULT_FILENAME):
@@ -130,7 +130,7 @@ class PlayerForecaster:
                             assert ret is not None, "PMDARIMA model failed to update"
                             player_mdl, new_targets, exog_feats = ret
                             #Create an ARIMA-class instance
-                            player_mdl = ARIMA(player_train_labels=new_targets,features_trn=exog_feats,model=player_mdl,player_name=player_name)
+                            player_mdl = ARIMA(player_train_labels=new_targets,features_trn=exog_feats,model=player_mdl,player_name=player_name,transform='none')
                             assert isinstance(player_mdl,ARIMA), "Failed to create an ARIMA-class model"
                         else:
                             logging.warning(f'Not an ARIMA model! Unimplemented, so skip')
