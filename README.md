@@ -36,10 +36,10 @@ Because updating data is not always available, the simple model has been trained
 2. In the root directory of the project (SportsCast/), run the command:
 
 ```bash
-python3 SportsCast_Framework/scripts/PlayerForecaster.py pred_points --player_name=“player_name” --num_games=10 --models_dir=$(pwd)/data/models --models_filename=“simple_model”
+python3 SportsCast_Framework/scripts/PlayerForecaster.py pred_points --player_name=“<player_name>” --num_games=<num_games> --models_dir=$(pwd)/data/models --models_filename=“simple_model”
 ```
 
-to verify that the model () is functional and provides a prediction. Player_name and num_games should once again be substituted with selected values (e.g. --player_name=“Travis Zajac”, --num_games=10).
+to verify that the model is functional and provides a prediction. <Player_name> and <num_games> should once again be substituted with selected values (e.g. --player_name=“Travis Zajac”, --num_games=10).
 
 
 3. To retrain, run the command:
