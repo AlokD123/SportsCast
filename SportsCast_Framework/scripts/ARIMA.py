@@ -2,27 +2,31 @@ from Model import Model
 import pmdarima as pm
 import pdb
 import logging
+import numpy as np
+from sklearn.preprocessing import PowerTransformer
 
 usePDB = True
 
 
 class ARIMA(Model): #TODO: decide if inherit Model or pmdarima ARIMA class
 
-    def __init__(self,player_train_labels,features_trn=None,model=None,player_name=None):
+    def __init__(self,player_train_labels,features_trn=None,model=None,player_name=None,transform:str='none'):
         super().__init__()
         self.player_name = player_name if player_name is not None else "NoName"
         self.use_exog_feats = False if features_trn is None  else True
         
+        self.transform = transform if model is None else 'none'
+        self.power_transformer = PowerTransformer() if model is None else None
+        #TODO: use hyperparameters to implement pre/postprocessing below
+        self.scaling_transformer = None if model is None else None
+        self.standardize = False if model is None else False            #stand
+        self.stdize_transformer = None if model is None else None
+        self.scale = False if model is None else False                  #scale
+
         if model is None:
             self.model = self.create(player_train_labels=player_train_labels,features_trn=features_trn)
         else:
             self.model = model
-
-        #TODO: use hyperparameters to implement pre/postprocessing below
-        #self.transform = transform
-        #self.standardize = stand
-        #self.scale = scale
-        #self.transformer = None
 
     #TODO: make hparams tunable
     def create(self,player_train_labels,features_trn=None):
@@ -49,21 +53,26 @@ class ARIMA(Model): #TODO: decide if inherit Model or pmdarima ARIMA class
         model = self.fit(player_train_labels,features_trn=features_trn,model=model)
         return model
 
-    def preprocess(self,player_train_labels): #self.transformer, transform, stand, scale
+    def preprocess(self,player_train_labels): #self.power_transformer, transform, stand, scale
         #TODO: decide if moving to Preprocessing.py
-        '''
-        if transform == 'log':
+
+        #By definition, only one col in df
+        try:
+            assert np.array(player_train_labels).shape[1]==1
+        except:
+            logging.warn(f'Horizontal list?')
+            assert np.array(player_train_labels).reshape(-1,1) == len(np.array(player_train_labels))
+            player_train_labels = np.array(player_train_labels).reshape(-1,1)
+        
+        if self.transform == 'log':
             # TODO: make this stat agnostic
-            player_train_labels.loc[:, 'logValues'] = np.log(player_train_labels['cumStatpoints'])
-        elif transform == 'yj':
-            transformer = PowerTransformer()
-            transformer.fit(player_train_labels.values.reshape(-1, 1))
-            player_train_labels.loc[:, 'transformedValues'] = transformer \
-                                                        .transform(
-                                                            player_train_labels[feature] \
-                                                            .values.reshape(-1, 1))
-            player_train_labels.drop(feature, axis=1, inplace=True)
-        '''
+            player_train_labels.iloc[:,0] = np.log(player_train_labels.iloc[:,0])
+        elif self.transform == 'yj':
+            transformer = self.power_transformer
+            transformer.fit(player_train_labels.iloc[:,0].values.reshape(-1, 1))
+            player_train_labels.iloc[:,0] = transformer.transform(player_train_labels.iloc[:,0].values.reshape(-1, 1))
+            #player_train_labels.drop(feature, axis=1, inplace=True)
+
         return player_train_labels
 
     def fit(self,player_train_labels,features_trn=None,model=None):
@@ -102,27 +111,37 @@ class ARIMA(Model): #TODO: decide if inherit Model or pmdarima ARIMA class
     def postprocess(self,train_predictions=None, predictions=None, intervals=None):
         #TODO: clean up
         #TODO: postprocess for scale/stand
-        #ppSeries = list()
-        '''
-        if train_predictions is not None:
-            if transform == 'log':
-                train_predictions = np.exp(train_predictions)
-            elif transform == 'yj':
-                train_predictions = transformer.inverse_transform(train_predictions.reshape(-1, 1))
-        if predictions is not None:
-            if transform == 'log':
-                predictions = np.exp(predictions)
-            elif transform == 'yj':
-                predictions = transformer.inverse_transform(predictions.reshape(-1, 1))
+
+        for pred in [train_predictions,predictions]:
+            if pred is not None:
+
+                #Reshape prediction vectors
+                pred = np.array(pred).reshape(-1,1)
+                if len(np.array(pred).shape)>2:
+                    pred = np.array(pred)[0] 
+
+                #Transform
+                if self.transform == 'log':
+                    pred = np.exp(pred)
+                elif self.transform == 'yj':
+                    pred = self.power_transformer.inverse_transform(pred.reshape(-1, 1))
+        
         if intervals is not None:
-            if transform == 'yj':
-                low_intervals = transformer.inverse_transform(intervals[:, 0].reshape(-1, 1))
-                high_intervals = transformer.inverse_transform(intervals[:, 1].reshape(-1, 1))
+            #Reshape array of prediction confidence intervals
+            intervals = np.array(intervals).reshape(-1,2)
+            if len(np.array(intervals).shape)>3:
+                intervals = np.array(intervals)[0]
+
+            #Transform and decompose
+            if self.transform == 'yj':
+                low_intervals = self.power_transformer.inverse_transform(intervals[:, 0].reshape(-1, 1))
+                high_intervals = self.power_transformer.inverse_transform(intervals[:, 1].reshape(-1, 1))
             else:
-                if transform == 'log':
+                if self.transform == 'log':
                     intervals = np.exp(intervals)
                 else:
                     pass
+                #Decompose into lower and upper bounds
                 low_intervals = []; high_intervals = []
                 for low, high in intervals:
                     low_intervals.append(low)
@@ -131,17 +150,10 @@ class ARIMA(Model): #TODO: decide if inherit Model or pmdarima ARIMA class
             return train_predictions, predictions, low_intervals, high_intervals
 
         return train_predictions, predictions, intervals
-        '''
-        #TODO: remove this and decide on above
-        if intervals is not None:
-            low_intervals = []; high_intervals = []
-            for low, high in intervals:
-                low_intervals.append(low)
-                high_intervals.append(high)
-            return train_predictions, predictions, low_intervals, high_intervals
-        else:
-            return train_predictions, predictions, intervals
 
+
+
+    #Unused because already implemented in MultiARIMA
     def evaluate(self):
         pass
 
@@ -151,7 +163,7 @@ class ARIMA(Model): #TODO: decide if inherit Model or pmdarima ARIMA class
             ret = Model.decomposeListDS_dict(player_dict,self.use_exog_feats)
             assert ret is not None, f"Failed to update ARIMA for {self.player_name}"
             new_targets, exog_feats = ret
-            if exog_feats is True:
+            if self.use_exog_feats is True:
                 for targ, exog in zip(new_targets,exog_feats): #TODO: decide if updating sequentially over scalars targ (current), or as target vector
                     self.model.update(targ,exogenous=exog.reshape(1,-1))
             else:
@@ -170,7 +182,7 @@ class ARIMA(Model): #TODO: decide if inherit Model or pmdarima ARIMA class
             assert ret is not None, f"Failed to update ARIMA for {player_name}"
             new_targets, exog_feats = ret
             if exog_feats is not None:
-                for targ, exog in zip(new_targets,exog_feats): #TODO: decide if updating sequentially over scalars targ (current), or as target vector
+                for targ, exog in zip(new_targets,exog_feats): #TODO: same as above
                     model.update(targ,exogenous=exog.reshape(1,-1))
             else:
                 for targ in new_targets:

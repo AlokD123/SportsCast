@@ -3,6 +3,8 @@ from gluonts.dataset.field_names import FieldName
 from gluonts.dataset.common import ListDataset
 from Model import Model
 from MultiARIMA import MultiARIMA
+import logging
+import os
 
 #ENVIRONMENT VARIABLES
 '''
@@ -19,42 +21,71 @@ TRAIN_DS_DIR = PRJ_PATH + "/data/train_ds"
 TRAIN_DS_FILENAME = "train_ds_all"              #.p
 TEST_DS_DIR = PRJ_PATH + "/data/test_ds"
 TEST_DS_FILENAME = "test_ds_all"               #.p
+MODELTRAIN_DIR = PRJ_PATH + "/data/models/trained"
+MODELTRAIN_FILENAME = "model_trained"           #.p
 MODELRESULT_DIR = PRJ_PATH + "/data/models"
 MODELRESULT_FILENAME = "arima_results"          #.p     #Join model type (arima or deepar) string as well as hparam string to this
 '''
 #TODO: change "arima_results" to "model_results"
 
-saver_reader = SavingReading()
+
+class TrainingEvaluation():
+
+    def __init__(self,Model_Cls:Model,use_exog_feat:bool,hparams:str="",train_ds_all:ListDataset=None):
+        assert train_ds_all is not None, "Missing dataset for training player ARIMAs"
+        self.saver_reader = SavingReading()
+        self.Model_Cls = Model_Cls
+        self.use_exog_feat = use_exog_feat
+        self.model = Model_Cls(train_ds_all,transform='none') if train_ds_all is not None else None
+        #Set hparams str    
+        #hparams = f"transform=__,..." #TODO
+        self.hparams = hparams
+
+    def train(self,train_ds_dir:str=os.getcwd()+"/data/train_ds",train_ds_fname:str="train_ds_all", \
+                model_train_dir:str=os.getcwd+"/data/models/trained", model_train_save_filename:str="model_trained", \
+                trn_params_sffix:str=""):
+
+        if self.model is None:
+            try:
+                train_ds_all = self.saver_reader.read(file_ext='.p',read_name=train_ds_fname+trn_params_sffix,full_read_dir=train_ds_dir,bool_read_s3=False)
+            except AssertionError as err:
+                logging.error(f'Couldn\'t open path: {err}. Can\'t create model to train')
+                return None
+            
+            #Create model
+            self.model = self.Model_Cls(train_ds_all,transform='none') #TODO: ADD MORE HPARAM ARGUMENTS
+
+        
+        self.model.create(use_exog_feat=self.use_exog_feat)
+        #Fit to dataset
+        self.model.fit()
+        #Save model
+        if not self.saver_reader.save(self.model,model_train_save_filename+self.hparams,model_train_dir):
+            logging.warn(f'Failed to save trained model!')
+        #TODO: possibly evaluate training error
+        return True
 
 
-def train(model,transform,full_save_dir:str,trn_ds_relative_path:str,results_save_dir:str, results_save_filename:str):
-    
-    assert isinstance(model,Model), "Improper model provided for training"
+    def evaluate(self,model_train_dir:str=os.getcwd+"/data/models/trained", model_train_save_filename:str="model_trained",\
+                test_ds_dir:str=os.getcwd()+"/data/test_ds",test_ds_fname:str="test_ds_all",\
+                modelresult_dir:str=os.getcwd+"/data/models", modelresult_filename:str="model_results",
+                test_params_sffix:str="", retrain_horizon:int=0):
 
-    #TODO: replace with saver_reader.read()
-    try:
-        f = open(full_save_dir+trn_ds_relative_path,"rb")
-        train_list_ds_all_players = pickle.load(f)
-    except NameError:
-        print(f'Couldn\'t open {full_save_dir+trn_ds_relative_path}')
-        #raise Exception (f"Couldnt open ")
-        return None
+        if model_train_save_filename == "model_trained":
+            model_train_save_filename = model_train_save_filename + self.hparams
+        if modelresult_filename == "model_results":
+            modelresult_filename = modelresult_filename + self.hparams
 
-    #Set hparams str
-    hparams = f"transform={transform}+___" #TODO
+        assert self.model is not None, "Create model first! (and ideally also train)"
 
-    #Create model
-    mar = MultiARIMA(train_list_ds_all_players) #TODO: ADD HPARAM ARGUMENTS
-    mar.create(use_exog_feat=True)
-    #Fit to dataset
-    mar.fit()
-    #Save results
-    saver_reader.save(mar.models_results_df,MODELRESULT_FILENAME+hparams,MODELRESULT_DIR)
-    #TODO: possibly evaluate training error
+        try:
+            test_ds_all = self.saver_reader.read(file_ext='.p',read_name=test_ds_fname+test_params_sffix,full_read_dir=test_ds_dir,bool_read_s3=False)
+        except AssertionError as err:
+            logging.error(f'Couldn\'t open path: {err}. Can\'t create model to train')
+            return None
 
+        self.model.evaluate(test_ds_all,horizon=retrain_horizon)
 
-def evaluate():
-
-    pass
-
-#test_ds_relative_path:str
+        #Save results
+        if not self.saver_reader.save(self.model.model_results_df,modelresult_filename+self.hparams,modelresult_dir):
+            logging.warn(f'Failed to save trained model!')
