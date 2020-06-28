@@ -34,14 +34,16 @@ class DataLoading:
     def __init__(self,saver_reader=None):
         self.saver_reader = saver_reader if saver_reader is not None else SavingReading()
 
-    def preprocessing(self,data):
+    @classmethod
+    def preprocessing(cls,data):
         #assert 'date' in data.columns
         data['date'] = pd.to_datetime(data['date'])
         return data 
 
-    def generate_list_ds(self,data, targets, targets_meta, targets_raw, stat_cat_features, dyn_cat_features, dyn_real_features, dyn_real_features_meta, player_names:list, boolTransformed=False):
+    @classmethod
+    def generate_list_ds(cls,data, targets, targets_meta, targets_raw, stat_cat_features, dyn_cat_features, dyn_real_features, dyn_real_features_meta, player_names:list, boolTransformed=False):
         data_meta = glnts.generate_minimal_metadata_all(data, index=None)
-        list_ds = glnts.getListDS(targets if boolTransformed else targets_raw, data_meta,stat_cat_features,dyn_cat_features,dyn_real_features,player_names)
+        list_ds = glnts.getListDS(targets if boolTransformed else targets_raw , data_meta,stat_cat_features,dyn_cat_features,dyn_real_features,player_names)
         return list_ds
 
     def load_data_listDS(self,
@@ -52,14 +54,13 @@ class DataLoading:
                         index='date',
                         feature='cumStatpoints',
                         forecast_from='2018-10-03',
-                        transform='none',               #TODO: keep? Currently could use in glnts.assembleTargets with stand+scale
                         roster=None,
                         column_list=None,
                         use_exog_feat=False,
                         boolTransformed=False,
                         boolSave=False,
                         stand=False,
-                        scale=True):
+                        scale=False):
 
         '''
         Inputs
@@ -80,7 +81,6 @@ class DataLoading:
                             roster, \
                             split_from=forecast_from, \
                             column_list=column_list, \
-                            streamlit=False, \
                             stand=stand, \
                             scale=scale, \
                             boolSplitTrainTest=boolSplitTrainTest \
@@ -98,15 +98,13 @@ class DataLoading:
             #Get names of players with sufficient data
             player_names = train['name'].unique()
 
-            #COPY FEATURE VERIFICATION GOES HERE.... ARIMA 156:196
-
             #FEATURE_SELECTION
             assert all([feat in train.columns for feat in [feature]]), f'Feat missing in these train columns: {train.columns}'
             assert all([feat in test.columns for feat in [feature]]), f'Feat missing in these test columns: {test.columns}'
             #TODO: add index change (ARIMA 205:210) if index = 'date' needed
 
-            train_list_ds = self.generate_list_ds(train,targets_trn, targets_meta_trn, targets_raw_trn, stat_cat_features_trn, dyn_cat_features_trn, dyn_real_features_trn, dyn_real_features_meta_trn, player_names, boolTransformed=boolTransformed)
-            test_list_ds = self.generate_list_ds(test,targets_test, targets_meta_test, targets_raw_test, stat_cat_features_test, dyn_cat_features_test, dyn_real_features_test, dyn_real_features_meta_test, player_names, boolTransformed=boolTransformed)
+            train_list_ds = DataLoading.generate_list_ds(train,targets_trn, targets_meta_trn, targets_raw_trn, stat_cat_features_trn, dyn_cat_features_trn, dyn_real_features_trn, dyn_real_features_meta_trn, player_names, boolTransformed=boolTransformed)
+            test_list_ds = DataLoading.generate_list_ds(test,targets_test, targets_meta_test, targets_raw_test, stat_cat_features_test, dyn_cat_features_test, dyn_real_features_test, dyn_real_features_meta_test, player_names, boolTransformed=boolTransformed)
 
             if boolSave:
                 self.saver_reader.save(train_list_ds,"train_ds_all"+fname_params_sffix,full_save_dir,bool_save_s3=False)
@@ -119,7 +117,7 @@ class DataLoading:
             #Get names of players with sufficient data
             player_names = data['name'].unique()
 
-            list_ds = self.generate_list_ds(data, targets, targets_meta, targets_raw, stat_cat_features, dyn_cat_features, dyn_real_features, dyn_real_features_meta, player_names, boolTransformed=boolTransformed)
+            list_ds = DataLoading.generate_list_ds(data, targets, targets_meta, targets_raw, stat_cat_features, dyn_cat_features, dyn_real_features, dyn_real_features_meta, player_names, boolTransformed=boolTransformed)
             if boolSave:
                 self.saver_reader.save(list_ds,"retrain_ds_all"+fname_params_sffix,full_save_dir,bool_save_s3=False)
 
@@ -127,19 +125,16 @@ class DataLoading:
 
 
 
-    #TODO: add 'transform' param input to load_data_listDS()?? See above
-
     #TODO: move use_exog_feat to TrainEvaluate.py
     def load_data_main(self,data_dir,data_fname,roster_dir,roster_fname, \
                         full_save_dir, fname_params_sffix, boolSplitTrainTest, \
                         use_exog_feat=False, boolTransformed=False, boolSave=False, \
                         column_list = ['date', 'name', 'gameNumber', 'cumStatpoints'], stand=False, \
-                        scale=True, index='date',feature='cumStatpoints',forecast_from='2018-10-03'):
+                        scale=False, index='date',feature='cumStatpoints',forecast_from='2018-10-03'):
         try:
-            #TODO: replace with saver_reader.read()
             data = self.saver_reader.read(file_ext='.csv',read_name=data_fname,full_read_dir=data_dir,bool_read_s3=False)
             full_roster = self.saver_reader.read(file_ext='.csv',read_name=roster_fname,full_read_dir=roster_dir,bool_read_s3=False)
-            data = self.preprocessing(data)
+            data = DataLoading.preprocessing(data)
             
             ret = self.load_data_listDS(data=data,roster=full_roster, use_exog_feat=use_exog_feat, stand=stand, \
                                         boolTransformed=boolTransformed, boolSave=boolSave, \
@@ -166,5 +161,5 @@ if __name__=="__main__":
     load_data_main(DATA_DIR+DATA_FILENAME+".csv",ROSTER_DIR+ROSTER_FILENAME+".csv",TRAIN_DS_DIR, fname_params_sffix=trn_params_sfx, \
                     boolSplitTrainTest=True, use_exog_feat=True, boolTransformed=False, boolSave=True, \
                     column_list = ['date', 'name', 'gameNumber', 'cumStatpoints'], stand=False, \
-                    scale=True, index='date',feature='cumStatpoints',forecast_from='2018-10-03')
+                    scale=False, index='date',feature='cumStatpoints',forecast_from='2018-10-03')
 '''
