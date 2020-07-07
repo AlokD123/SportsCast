@@ -152,14 +152,3 @@ class DataLoading:
         except AssertionError as err:
             logging.error(f'Error in loading data: {err}')
             return None
-
-
-'''
-#CREATE A TRAINING SET HERE
-if __name__=="__main__":
-    trn_params_sfx = "" #TODO
-    load_data_main(DATA_DIR+DATA_FILENAME+".csv",ROSTER_DIR+ROSTER_FILENAME+".csv",TRAIN_DS_DIR, fname_params_sffix=trn_params_sfx, \
-                    boolSplitTrainTest=True, use_exog_feat=True, boolTransformed=False, boolSave=True, \
-                    column_list = ['date', 'name', 'gameNumber', 'cumStatpoints'], stand=False, \
-                    scale=False, index='date',feature='cumStatpoints',forecast_from='2018-10-03')
-'''

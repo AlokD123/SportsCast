@@ -32,11 +32,10 @@ MODELRESULT_FILENAME = "arima_results"          #.p     #Join model type (arima 
 class TrainingEvaluation():
 
     def __init__(self,Model_Cls:Model,use_exog_feat:bool,hparams:str="",train_ds_all:ListDataset=None):
-        assert train_ds_all is not None, "Missing dataset for training player ARIMAs"
         self.saver_reader = SavingReading()
         self.Model_Cls = Model_Cls
         self.use_exog_feat = use_exog_feat
-        self.model = Model_Cls(train_ds_all,transform='none') if train_ds_all is not None else None
+        self.model = None if train_ds_all is None else Model_Cls(train_ds_all,transform='none')
         #Set hparams str    
         #hparams = f"transform=__,..." #TODO
         self.hparams = hparams

@@ -151,6 +151,9 @@ class PlayerForecaster:
                 logging.error(f'Cant retrain at all: {err}')
                 return None
 
+        else:
+            return False
+
     '''        
     def retrain_main(self,hparams:str,updated_data_dir:str=UPDATED_DATA_DIR,updated_data_fname:str=UPDATED_DATA_FILENAME,\
                     roster_dir:str=ROSTER_DIR, roster_fname:str=ROSTER_FILENAME, load_save_dir:str=RETRAIN_DS_DIR): #TODO: see TrainingEvaluation.train()
@@ -182,7 +185,8 @@ class PlayerForecaster:
         else:
             logging.debug('Starting retraining with the following:\n')
             logging.debug(new_list_ds.list_data)
-            self.retrain(hparams=hparams,retrain_ds_all_players=new_list_ds,models_dir=models_dir,models_fname=models_fname,use_exog_feats=use_exog_feats) #TODO: Add options for non-default re-train save location
+            if self.retrain(hparams=hparams,retrain_ds_all_players=new_list_ds,models_dir=models_dir,models_fname=models_fname,use_exog_feats=use_exog_feats) is not True: #TODO: Add options for non-default re-train save location
+                return False
             return True
 
 if __name__ == '__main__':
