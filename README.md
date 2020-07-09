@@ -31,7 +31,7 @@ The full model is deployed on an AWS EC2 instance, and has been set up to contin
 
 Because updating data is not always available, the simple model has been trained using data up until May 2019. It may be retrained using the latest data based on the following steps:
 
-1. Clone the current git repository.
+1. Clone the current git repository and recreate conda environment using environment.yml
 
 2. In the root directory of the project (SportsCast/), run the command:
 
