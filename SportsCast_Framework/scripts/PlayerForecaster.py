@@ -12,51 +12,53 @@ from DataIngestion import DataIngestion
 import logging
 import pdb
 
-#ENVIRONMENT VARIABLES
-'''
-PRJ_PATH = 
-DATA_DIR = PRJ_PATH + "/data/inputs"
-DATA_FILENAME = "full_dataset_4_seasons"        #.csv
-UPDATED_DATA_DIR = PRJ_PATH + "/data/inputs"
-UPDATED_DATA_FILENAME = "full_dataset_updated"  #.csv
-ROSTER_DIR = PRJ_PATH + "/data/inputs"
-ROSTER_FILENAME = "full_roster_4_seasons"       #.csv
-RETRAIN_DS_DIR = PRJ_PATH + "/data/retrain_ds"
-RETRAIN_DS_FILENAME = "retrain_ds_all"          #.p
-TRAIN_DS_DIR = PRJ_PATH + "/data/train_ds"
-TRAIN_DS_FILENAME = "train_ds_all"              #.p
-TEST_DS_DIR = PRJ_PATH + "/data/test_ds"
-TEST_DS_FILENAME = "test_ds_all"               #.p
-MODELRESULT_DIR = PRJ_PATH + "/data/models"
-MODELRESULT_FILENAME = "arima_results"          #.p     #Join model type (arima or deepar) string as well as hparam string to this
-'''
-#TODO: change "arima_results" to "model_results"
-
 
 #TODO: maybe don't import here? This module could be opaque to model details
 from ARIMA import ARIMA
 import pmdarima as pm       #Only needed here to support legacy saved models. Should remove otherwise to again make module opaque
 
 class PlayerForecaster:
+    ''' Main class for inference and retraining pipelines '''
     def __init__(self,models_dir=None,models_filename=None):
+        '''
+        Parameters
+        ----
+        models_dir: location of trained model to load
+
+        models_filename: filename for same
+        '''
         self.currPlayer = None
         self.currModel = None
         self.models_dir = models_dir
         self.models_filename = models_filename
-        self.all_model_results_df = None
+        self.all_model_results_df = None            #IMPORTANT: see MultiARIMA.py for explanation
         self.saver_reader = SavingReading()
         self.ingestor = DataIngestion(initial_ingestion=False,saver_reader=self.saver_reader)
         self.data_loader = DataLoading(saver_reader=self.saver_reader)
 
         assert self.saver_reader is not None, "Failed to create a saver-reader"
 
-        #TODO: fix logic for path=None or path=absent
+        #TODO: add cases for path=None or path=''
         if models_dir is not None and models_filename is not None:
             assert self.load_all_models(models_dir=models_dir,models_filename=models_filename,load_pickled=True) is True, "Failed to create PlayerForecaster"
 
-    #TODO: update default to use ENV VARIABLES
-    #def load_all_models(self,models_dir=os.getcwd()+'/data/outputs',models_fname="arima_results_m3_fourStep_noFeatures.p"):
+
     def load_all_models(self,models_dir=os.getcwd()+'/data/models',models_filename="model_results",load_pickled=False): #TODO: override with hparams suffix from CLI arg
+        '''
+        Loads trained models for all players
+
+        Parameters
+        ----
+        models_dir: location of trained model to load
+
+        models_filename: filename for same
+
+        load_pickled: load model files that have been pickled
+
+        Returns
+        ----
+        Success boolean (True if success, False/None otherwise)
+        '''
         try:
             if load_pickled:
                 obj = self.saver_reader.read(file_ext='.p',read_name=models_filename,full_read_dir=models_dir,bool_read_s3=False)
@@ -72,6 +74,13 @@ class PlayerForecaster:
             return False
 
     def getPlayerModel(self,player_name):
+        '''
+        Gets the trained model for a given player
+
+        Returns
+        ----
+        Model instance for player
+        '''
         try:
             self.currPlayer = player_name
             return self.all_model_results_df.loc[player_name,'model']
@@ -83,6 +92,27 @@ class PlayerForecaster:
     #TODO: replace string return with JSON return. HERE AND IN INFER_SERVE
     def pred_points(self,player_name:str, num_games: int, models_dir:str=os.getcwd()+"/data/models", \
                     models_filename:str="model_results",print_single_str=False):                            #TODO: override with hparams suffix from CLI arg
+        '''
+        Runs inference
+
+        Parameters
+        -----
+        player_name: name
+
+        num_games: number of games to forecast
+
+        models_dir: location of model to load
+
+        models_filename: filename for same
+
+        print_single_str: whether to return result as a string or list
+
+        Returns
+        ----
+        String or list of strings with predicted results
+
+        '''
+        
         #TODO: add test for self.currModel is None
         if self.all_model_results_df is None:
             if not self.load_all_models(models_dir=models_dir,models_filename=models_filename,load_pickled=True):
@@ -107,10 +137,32 @@ class PlayerForecaster:
             return [f'Game {i}: {predictions[i]:.2f} (lower bound: {low_intervals[i]:.2f}, upper bound:{high_intervals[i]:.2f})' for i in range(num_games)]
 
 
-    #def retrain(self,hparams:str,retrain_ds_all_players:ListDataset,models_dir:str=MODELRESULT_DIR,models_fname:str=MODELRESULT_FILENAME):
+    
     def retrain(self,hparams:str,retrain_ds_all_players:ListDataset,models_dir:str=os.getcwd()+"/data/models",models_fname:str="model_results",use_exog_feats:bool=True):
+        '''
+        Retrains models for all players in the retrain dataset. Overwrites current model with retrained one
+
+        Parameters
+        -----
+        hparams: str of hyperparameters to use
+
+        retrain_ds_all_players: ListDataset for retraining (see MultiARIMA.py for definition of ListDataset)
+
+        models_dir: location of model to load
+
+        models_filename: filename for same
+
+        use_exog_feats: use exogenous features when retraining or not
+
+        Returns
+        ----
+        Success boolean
+
+        '''
+        
         if(self.load_all_models(models_dir,models_fname+hparams,load_pickled=True)): #.csv file containing dataframe of ModelResult for all players             #TODO: change load_pickled to false for NEW .csv-saved files
             try:
+                #For each player's data in retrain dataset...
                 for retrain_dict in retrain_ds_all_players.list_data:
                     assert 'name' in retrain_dict.keys(), "No field 'name' provided in retrain_ds_all_players"
                     player_name = retrain_dict['name']
@@ -118,19 +170,16 @@ class PlayerForecaster:
                     if player_mdl is None:
                         logging.warning(f'No model found for {player_name}')
                         continue
-                    '''
-                    TODO: update the other columns of self.all_model_results_df.loc[player_name,:] by first performing evaluation on the new retrain data?
-                    e.g. self.all_model_results_df.loc[player_name,??] = player_mdl.evaluate(retrain_dict['target'],player_mdl.predict(n_periods,exog=) )
-                    '''
+                    
+                    
                     try:
                         if isinstance(player_mdl,ARIMA):
-                            player_mdl.update(player_dict=retrain_dict)
+                            player_mdl.update(player_dict=retrain_dict) #Re-train
                         elif isinstance(player_mdl,pm.ARIMA):
-                            ret = ARIMA.update_PMDARIMA(model=player_mdl,player_dict=retrain_dict,use_exog_feats=use_exog_feats,player_name=player_name)
+                            ret = ARIMA.update_PMDARIMA(model=player_mdl,player_dict=retrain_dict,use_exog_feats=use_exog_feats,player_name=player_name) #Retrain legacy model
                             assert ret is not None, "PMDARIMA model failed to update"
                             player_mdl, new_targets, exog_feats = ret
-                            #Create an ARIMA-class instance
-                            player_mdl = ARIMA(player_train_labels=new_targets,features_trn=exog_feats,model=player_mdl,player_name=player_name,transform='none')
+                            player_mdl = ARIMA(player_train_labels=new_targets,features_trn=exog_feats,model=player_mdl,player_name=player_name,transform='none') #Create ARIMA.py class model after retrained (wrap)
                             assert isinstance(player_mdl,ARIMA), "Failed to create an ARIMA-class model"
                         else:
                             logging.warning(f'Not an ARIMA model! Unimplemented, so skip')
@@ -142,10 +191,11 @@ class PlayerForecaster:
 
                     self.all_model_results_df.loc[player_name,'model'] = player_mdl
 
-                    #Overwrite df
+                    #Overwrite models/results dataframe
                     logging.info('Overwriting df after retraining')
                     self.saver_reader.save(self.all_model_results_df,models_fname+hparams,models_dir,bool_save_pickle=True,bool_save_s3=False)
-                    return player_mdl
+                
+                return True
 
             except AssertionError as err:
                 logging.error(f'Cant retrain at all: {err}')
@@ -164,6 +214,18 @@ class PlayerForecaster:
                     updated_data_dir:str=os.getcwd()+"/data/inputs",updated_data_fname:str="full_dataset_updated",\
                     load_save_dir:str=os.getcwd()+"/data/retrain_ds", \
                     models_dir:str=os.getcwd()+"/data/models",models_fname:str="model_results"):
+
+        '''
+        Calls retrain with newly ingested data file and appropriate parameters
+
+        Parameters
+        ---
+        Described variously here, in DataIngestion.py, in DataLoading.py
+
+        Returns
+        ----
+        Success boolean
+        '''
         all_rosters, new_full_df = self.ingestor.ingest_new_league_data(roster_name=roster_fname,roster_dir=roster_dir,save_dir=updated_data_dir,save_name=updated_data_fname, \
                                                                         old_read_dir=old_ingest_dir,old_read_name=old_ingest_name,new_read_dir=new_ingest_dir,new_read_name=new_ingest_name)
 
@@ -189,5 +251,6 @@ class PlayerForecaster:
                 return False
             return True
 
+
 if __name__ == '__main__':
-    fire.Fire(PlayerForecaster)
+    fire.Fire(PlayerForecaster) #Start CLI
