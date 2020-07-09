@@ -4,9 +4,25 @@ import pandas as pd
 import itertools
 
 class Evaluator:
+    ''' Provides methods for evaluation '''
     @classmethod
     def calculate_errors(cls,residuals):
-        """ Calculates errors based on residuals """
+        '''
+        Calculates errors based on residuals
+
+        Parameters
+        ----
+        residuals: vector
+
+        Returns
+        ---
+        mfe: mean forecasting error
+        
+        mae: mean abs error
+
+        rmse: root MSE
+
+        '''
         num_residuals = len(residuals)
         mfe = (residuals.sum() / num_residuals).tolist()[0]
         mae = (residuals.abs().sum() / num_residuals).tolist()[0]
@@ -17,7 +33,20 @@ class Evaluator:
 
     @classmethod
     def calculate_test_residuals(cls,prediction_array, test_data):
-        """ Calculates test residuals based on prediction and test data """
+        '''
+        Calculates test residuals based on prediction and test data
+
+        Parameters
+        ----
+        prediction_array: prediction
+
+        test_data: labels
+
+        Returns
+        ---
+        residuals: vector of residuals
+
+        '''
         prediction_array = prediction_array.reshape(len(test_data), 1)
         test_data = test_data.values
         residuals = np.subtract(test_data, prediction_array)
@@ -27,6 +56,20 @@ class Evaluator:
 
     @classmethod
     def diffN(cls,arr1,N):
+        '''
+        Calculates N-step differences for an array (to calculate modified-MASE)
+
+        Parameters
+        ----
+        arr1: array (vector)
+
+        N: number of steps
+
+        Returns
+        ---
+        diff_arr: N-step differenced array
+
+        '''
         assert N>0, "Invalid difference!"
         f = lambda arr,i,n : 0 if (i+n+1)>len(arr) else arr[i+n]-arr[i]
         diff_arr = np.zeros(len(arr1))
@@ -36,6 +79,29 @@ class Evaluator:
     
     @classmethod
     def calculate_errors_trackingSig(cls,target_data, prediction_array=None, residuals=None, mase_forecast=1):
+        '''
+        Calculates all metrics
+
+        Parameters
+        ----
+        target_data: labels
+        
+        prediction_array: predictions
+
+        residuals: vector
+
+        mase_forecast: number of steps for forecasting used
+
+        Returns
+        ---
+        Previously defined metrics and...
+
+        tracking: tracking signal metric
+
+        mase: a MODIFIED version of the mean abs scaled error based on N-steps forecasting (defined in mase_forecast)
+
+        '''
+
         try:
             if residuals is None and prediction_array is not None:
                 residuals = Evaluator.calculate_test_residuals(prediction_array,target_data)
@@ -77,12 +143,36 @@ class Evaluator:
 
     @classmethod
     def batch_array(cls,iterable, n=1):
+        '''
+        Batches a list into parts, with the possibility of remainder
+
+        Parameters
+        ----
+        n: length of batch
+
+        Returns
+        ----
+        iterator to get batch
+        '''
+
         totLen = len(iterable)
         for ndx in range(0, totLen, n):
             yield iterable[ndx:min(ndx + n, totLen)]
 
     @classmethod
     def batch_generator(cls,iterable, n):
+        '''
+        Batches a generic iterable into parts, with the possibility of remainder
+
+        Parameters
+        ----
+        n: length of batch
+
+        Returns
+        ----
+        chunk: iterator to get batch
+        '''
+        
         it = iter(iterable)
         while True:
             chunk = tuple(itertools.islice(it, n))

@@ -5,14 +5,18 @@ import numpy as np
 import pdb
 import logging
 
-usePDB = True
 
 def reshape_arr_vertical(arr):
+    ''' Reshapes horizontal to vertical '''
     if arr.shape[0] < arr.shape[1]:
         arr = np.transpose(arr)
     return arr
 
 class Model(ABC):
+    '''
+    Abstract class to specify the interface for a forecasting model in this project.
+    Allows for intechanging models on-the-fly during training/evaluation (see TrainingEvaluation.py)
+    '''
     def __init__(self):
         pass
     @abstractmethod
@@ -33,8 +37,25 @@ class Model(ABC):
 
     @classmethod
     def decomposeListDS_dict(cls,player_dict:dict,use_exog_feats=False):
+        '''
+        Decomposes a player_dict dictionary contained in a ListDataset instance
+
+        Parameters
+        ----
+        player_dict: dictionary of labels ('targets'), real-valued and categorical features in dataset for a player. See glnts.py for details
+
+        use_exog_feats: flag of whether to return these exogenous features in addition to the labels.
+
+        Returns
+        ----
+        player_labels: labels vector
+
+        player_features: features as an nd-array
+        '''
         player_labels = player_dict[FieldName.TARGET]
         if use_exog_feats:
+
+            #Preprocess exogenous features
             try:
                 dyn_real_features = player_dict[FieldName.FEAT_DYNAMIC_REAL]
                 dyn_cat_features = player_dict[FieldName.FEAT_DYNAMIC_CAT]
@@ -42,13 +63,13 @@ class Model(ABC):
                 assert len(dyn_real_features)>0, "Missing dyn_cat_features"
             except AssertionError as err:
                 logging.error(f'Error in decomposing DS: {err}')
-                if usePDB:
-                    pdb.set_trace()
                 return None
             dyn_cat_features = reshape_arr_vertical(np.array(dyn_cat_features))
             dyn_real_features = reshape_arr_vertical(np.array(dyn_real_features))
+
+            #Try to concatenate
             try:
-                player_features = np.hstack( ( np.array(dyn_cat_features), np.array(dyn_real_features) ) ) #Try to concatenate
+                player_features = np.hstack( ( np.array(dyn_cat_features), np.array(dyn_real_features) ) )
             except ValueError:
                 try:
                     player_features = np.hstack( ( np.array(dyn_cat_features).T, np.array(dyn_real_features).T ) ) #Legacy handling
@@ -58,8 +79,6 @@ class Model(ABC):
                 logging.error(f'Error in decomposing DS: couldnt concatenate feature arrays: {err}')
                 logging.error(f'\ndyn_cat_features: {np.array(dyn_cat_features)}. Shape: {np.array(dyn_cat_features).shape}')
                 logging.error(f'\ndyn_real_features: {np.array(dyn_real_features)}. Shape: {np.array(dyn_real_features).shape}')
-                if usePDB:
-                    pdb.set_trace()
                 return None
             return player_labels, player_features
         else:

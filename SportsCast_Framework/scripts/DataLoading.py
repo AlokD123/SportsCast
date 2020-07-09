@@ -8,75 +8,57 @@ import pandas as pd
 from SavingReading import SavingReading
 import logging
 
-#ENVIRONMENT VARIABLES
-'''
-PRJ_PATH = 
-DATA_DIR = PRJ_PATH + "/data/inputs"
-DATA_FILENAME = "full_dataset_4_seasons"        #.csv
-UPDATED_DATA_DIR = PRJ_PATH + "/data/inputs"
-UPDATED_DATA_FILENAME = "full_dataset_updated"  #.csv
-ROSTER_DIR = PRJ_PATH + "/data/inputs"
-ROSTER_FILENAME = "full_roster_4_seasons"       #.csv
-RETRAIN_DS_DIR = PRJ_PATH + "/data/retrain_ds"
-RETRAIN_DS_FILENAME = "retrain_ds_all"          #.p
-TRAIN_DS_DIR = PRJ_PATH + "/data/train_ds"
-TRAIN_DS_FILENAME = "train_ds_all"              #.p
-TEST_DS_DIR = PRJ_PATH + "/data/test_ds"
-TEST_DS_FILENAME = "test_ds_all"               #.p
-MODELRESULT_DIR = PRJ_PATH + "/data/models"
-MODELRESULT_FILENAME = "arima_results"          #.p     #Join model type (arima or deepar) string as well as hparam string to this
-'''
-#TODO: change "arima_results" to "model_results"
-
-
 
 class DataLoading:
+    ''' Class for loading and preprocessing data '''
     def __init__(self,saver_reader=None):
-        self.saver_reader = saver_reader if saver_reader is not None else SavingReading()
+        self.saver_reader = saver_reader if saver_reader is not None else SavingReading() #To save/load (see SavingReading.py)
 
     @classmethod
     def preprocessing(cls,data):
-        #assert 'date' in data.columns
-        data['date'] = pd.to_datetime(data['date'])
+        data['date'] = pd.to_datetime(data['date']) #Change to datetime
         return data 
 
     @classmethod
     def generate_list_ds(cls,data, targets, targets_meta, targets_raw, stat_cat_features, dyn_cat_features, dyn_real_features, dyn_real_features_meta, player_names:list, boolTransformed=False):
+        ''' Creates a list dataset using static and dynamic (real and categorical) features, as well as train/test labels ('targets') and metadata '''
         data_meta = glnts.generate_minimal_metadata_all(data, index=None)
         list_ds = glnts.getListDS(targets if boolTransformed else targets_raw , data_meta,stat_cat_features,dyn_cat_features,dyn_real_features,player_names)
         return list_ds
 
     def load_data_listDS(self,
-                        data,
-                        full_save_dir,
-                        fname_params_sffix,
-                        boolSplitTrainTest,
-                        index='date',
-                        feature='cumStatpoints',
-                        forecast_from='2018-10-03',
-                        roster=None,
-                        column_list=None,
-                        use_exog_feat=False,
-                        boolTransformed=False,
-                        boolSave=False,
-                        stand=False,
-                        scale=False):
+                        data,                           #game-by-game data for ALL players (dataframe)
+                        full_save_dir,                  #location to save loaded data
+                        fname_params_sffix,             #suffix for parameters to use when saving
+                        boolSplitTrainTest,             #whether to split
+                        index='date',                   #index variable
+                        feature='cumStatpoints',        #name of feature to use as label in dataset
+                        forecast_from='2018-10-03',     #train-test split date
+                        roster=None,                    #roster data for ALL players (dataframe)
+                        column_list=None,               #list of main data/metadata columns to load from dataframe 'data'
+                        use_exog_feat=False,            #whether to load the additional exogenous features, e.g. teammate presence during a game (see ARIMA.py)
+                        boolTransformed=False,          #transform data or not
+                        boolSave=False,                 #save or not
+                        stand=False,                    #standardize data or not
+                        scale=False):                   #scale (normalize) data or not
 
         '''
-        Inputs
-        =====
-        data: for ALL players
+        Loads and preprocesses data. Optionally saves
 
-        Outputs
-        =====
-        x_train_listDS.p + x_test_listDS.p for that player
+        Returns
+        ---
+        train_list_ds: ListDataset for training a SINGLE player model (see MultiARIMA.py for details)
+
+        test_list_ds: ListDataset for testing a SINGLE player model
+
+        list_ds: aggegate of the above, if no train-test split (for retraining)
         '''
 
         assert len(data)>0,"Missing data"
         assert roster is not None and len(roster)>0, "Missing roster"
         assert all([feat in data.columns for feat in ['name','date']]), f"Missing feature. Data has columns: {data.columns}"
 
-
+        #Performs preprocessing, splitting, and exogenous feature extraction using raw dataframes
         ret = glnts.prep_df(data, \
                             roster, \
                             split_from=forecast_from, \
@@ -101,8 +83,8 @@ class DataLoading:
             #FEATURE_SELECTION
             assert all([feat in train.columns for feat in [feature]]), f'Feat missing in these train columns: {train.columns}'
             assert all([feat in test.columns for feat in [feature]]), f'Feat missing in these test columns: {test.columns}'
-            #TODO: add index change (ARIMA 205:210) if index = 'date' needed
 
+            #Create ListDataset instances
             train_list_ds = DataLoading.generate_list_ds(train,targets_trn, targets_meta_trn, targets_raw_trn, stat_cat_features_trn, dyn_cat_features_trn, dyn_real_features_trn, dyn_real_features_meta_trn, player_names, boolTransformed=boolTransformed)
             test_list_ds = DataLoading.generate_list_ds(test,targets_test, targets_meta_test, targets_raw_test, stat_cat_features_test, dyn_cat_features_test, dyn_real_features_test, dyn_real_features_meta_test, player_names, boolTransformed=boolTransformed)
 
@@ -117,6 +99,7 @@ class DataLoading:
             #Get names of players with sufficient data
             player_names = data['name'].unique()
 
+            #Create ListDataset instances
             list_ds = DataLoading.generate_list_ds(data, targets, targets_meta, targets_raw, stat_cat_features, dyn_cat_features, dyn_real_features, dyn_real_features_meta, player_names, boolTransformed=boolTransformed)
             if boolSave:
                 self.saver_reader.save(list_ds,"retrain_ds_all"+fname_params_sffix,full_save_dir,bool_save_s3=False)
@@ -131,6 +114,18 @@ class DataLoading:
                         use_exog_feat=False, boolTransformed=False, boolSave=False, \
                         column_list = ['date', 'name', 'gameNumber', 'cumStatpoints'], stand=False, \
                         scale=False, index='date',feature='cumStatpoints',forecast_from='2018-10-03'):
+
+        '''
+        Calls load_data_listDS with ingested data file and appropriate parameters
+
+        Parameters
+        ---
+        See above + various filepaths previously defined
+
+        Returns
+        ---
+        Same ListDatasets as above
+        '''
         try:
             data = self.saver_reader.read(file_ext='.csv',read_name=data_fname,full_read_dir=data_dir,bool_read_s3=False)
             full_roster = self.saver_reader.read(file_ext='.csv',read_name=roster_fname,full_read_dir=roster_dir,bool_read_s3=False)

@@ -16,13 +16,20 @@ from bentoml.handlers import DataframeHandler
 @bentoml.artifacts([PickleArtifact('model')])
 @bentoml.env(auto_pip_dependencies=True)
 class Forecast_Service(bentoml.BentoService):
-    #self.args = {"player_name":0, "num_games":1}
+    ''' BentoService class. Server prediction request '''
 
     @bentoml.api(DataframeHandler, typ='series')
     def predict(self, series):
-        """
-        predict expects pandas.Series as input
-        """        
+        '''
+        Serves prediction request 
+
+        Parameters
+        ----
+        series: Pandas series, with indices as per this dict (key=type, value=index)
+        
+        {"player_name":0, 
+          "num_games":1}
+        '''        
         return self.artifacts.model.pred_points(series[0],series[1])
 
 def create_service(models_dir:str=os.getcwd()+"/data/models", models_fname:str="model_results", bento_dir:str=os.getcwd()+"/serve/bentoml"):
@@ -36,7 +43,7 @@ def create_service(models_dir:str=os.getcwd()+"/data/models", models_fname:str="
         bento_service = Forecast_Service()
         bento_service.pack('model', pf)
 
-        # 3) save  BentoService to file archive
+        # 3) save BentoService to file archive
         saved_path = bento_service.save(bento_dir)
 
         return True

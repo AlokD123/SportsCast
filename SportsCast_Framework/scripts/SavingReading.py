@@ -8,7 +8,11 @@ import os
 import glob
 
 class SavingReading:
-    
+    '''
+    Class for generalized reading/writing of files of all types and locations (local or S3)
+
+    NOTE: will only provide docstrings for main read/save functions, since others are helper functions that implement features: read/save type, read/save location, auxiliary file deletion/creation
+    '''
     def __init__(self,bucket_name='insight-prj-bucket',region=None):
         try:
             # Create an S3 client
@@ -81,6 +85,25 @@ class SavingReading:
             return None
 
     def save(self,obj,save_name:str,full_save_dir:str, bool_save_pickle=False, bool_save_s3=False):
+        '''
+        Saves a generic file
+
+        Parameters
+        ---
+        obj: type of object to save. Inferred to save as CSV if dataframe and pickle otherwise, unless overwritten by bool_save_pickle
+
+        save_name: filename for saving. 
+
+        full_save_dir: full path to save. If on cloud, will recreate local directory structure in S3
+
+        bool_save_pickle: overwriting option mentioned above
+
+        bool_save_s3: whether to save to S3
+
+        Returns
+        ---
+        Success boolean (True if success, False if fail, None if error)
+        '''
         logging.debug(f"Arguments:\nsave_name={save_name},\nfull_save_dir={full_save_dir},\nbool_save_s3={bool_save_s3}")
         if bool_save_s3:
             ret = self.save_to_s3(obj,save_name,full_save_dir)
@@ -152,7 +175,6 @@ class SavingReading:
         try: 
             df = pd.read_csv(full_read_dir + "/" + read_name + ".csv")
             if 'Unnamed: 0' in df.columns:
-                #df = df.drop(columns=['Unnamed: 0'])
                 df = df.set_index('Unnamed: 0')
                 df.index.name = None
             return df
@@ -176,6 +198,25 @@ class SavingReading:
             return None
 
     def read(self,file_ext:str,read_name:str,full_read_dir:str,pickle_obj_cls=None, bool_read_s3=False):
+        '''
+        Reads a generic file
+
+        Parameters
+        ---
+        file_ext: extension of file to read. Will check that loaded object of appropriate type based on extension (e.g. Dataframe if CSV)
+
+        read_name: filename for reading. 
+
+        full_read_dir: full path to read.
+
+        pickle_obj_cls: class expected to load if pickled file. Will check
+
+        bool_read_s3: whether to read from S3
+
+        Returns
+        ---
+        Success boolean (True if success, False if fail, None if error)
+        '''
         logging.debug(f"Arguments:\nfile_ext: {file_ext},\nread_name={read_name},\nfull_read_dir={full_read_dir},\npickle_obj_cls={pickle_obj_cls},\nbool_read_s3={bool_read_s3}")
         if file_ext == ".csv":
             if bool_read_s3:

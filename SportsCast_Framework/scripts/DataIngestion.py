@@ -6,46 +6,66 @@ import os
 import pdb
 import logging
 
-#ENVIRONMENT VARIABLES
-'''
-PRJ_PATH = 
-DATA_DIR = PRJ_PATH + "/data/inputs"
-DATA_FILENAME = "full_dataset_4_seasons"        #.csv
-UPDATED_DATA_DIR = PRJ_PATH + "/data/inputs"
-UPDATED_DATA_FILENAME = "full_dataset_updated"  #.csv
-ROSTER_DIR = PRJ_PATH + "/data/inputs"
-ROSTER_FILENAME = "full_roster_4_seasons"       #.csv
-RETRAIN_DS_DIR = PRJ_PATH + "/data/retrain_ds"
-RETRAIN_DS_FILENAME = "retrain_ds_all"          #.p
-TRAIN_DS_DIR = PRJ_PATH + "/data/train_ds"
-TRAIN_DS_FILENAME = "train_ds_all"              #.p
-TEST_DS_DIR = PRJ_PATH + "/data/test_ds"
-TEST_DS_FILENAME = "test_ds_all"               #.p
-MODELRESULT_DIR = PRJ_PATH + "/data/models"
-MODELRESULT_FILENAME = "arima_results"          #.p     #Join model type (arima or deepar) string as well as hparam string to this
-'''
-#TODO: change "arima_results" to "model_results"
-
 
 class DataIngestion:
+    ''' Class to ingest new data using API module '''
     def __init__(self,initial_ingestion:bool=True,saver_reader=None):
+        '''
+        Parameters
+        ----
+        initial_ingestion: whether to ingest immediately after creating ingestor
+
+        saver_reader: an instance to save and read from all files generically (see SavingReading.py)
+        '''
         self.saver_reader = saver_reader if saver_reader is not None else SavingReading()
         self.last_ingestion_time = None
         if initial_ingestion:
             self.ingest_league_data(boolSaveData=True)
         
-    def load_some_data(self,save_path:str=os.getcwd()+"/data/inputs",save_name:str='some_data'): #.csv
+    def load_season_data(self,save_path:str=os.getcwd()+"/data/inputs",save_name:str='some_data'): #.csv
+        '''
+        Saves season data to a CSV
+
+        Parameters
+        ----
+        save_path: location to save NHL season data
+
+        save_name: filename for same
+
+        Returns
+        ----
+        None
+        '''
         season_id, season_start, season_end = api.get_current_season()
         df = pd.DataFrame({"season_id":season_id,"season_start":season_start,"season_end":season_end})         
         self.saver_reader.save(df,save_name,save_path)
         
     #TODO: implement updating roster each season
-    #Using only date after 2014 for now
     def ingest_league_data(self,save_dir:str=os.getcwd()+"/data/inputs",save_name:str="full_dataset_updated", roster_name:str="full_roster_4_seasons", roster_dir:str=os.getcwd()+"/data/inputs", boolSaveData:bool=True): #.csv
-        season_id_list = [20152016, 20162017, 20172018, 20182019]
+        '''
+        Saves league game data and roster data to a CSV for training and testing models
+
+        Parameters
+        ----
+        save_path: location to save league game data
+
+        save_name: filename for same
+
+        roster_dir: location to save league roster data
+
+        roster_name: filename for same
+
+        boolSaveData: whether to save
+
+        Returns
+        ----
+        all_rosters: list of all rosters for all teams during the seasons in season_id_list
+
+        full_df: game by game data during the seasons in season_id_list
+        '''
+        season_id_list = [20152016, 20162017, 20172018, 20182019]           #TODO: make user-defined
         all_rosters = api.get_all_rosters(season_id_list=season_id_list)
-        #if "Unnamed: 0" in all_rosters.columns:
-        #    all_rosters.rename(columns={"Unnamed: 0":"PlayerID"})
+
         full_df = api.assemble_multiplayer_stat_dataframe(player_id_list=list(all_rosters.index), boolAddSimulated=False, season_id_list=season_id_list)
         test_season = season_id_list[-1] + 10001 #Try getting next season
         try:
@@ -69,6 +89,38 @@ class DataIngestion:
                                 roster_name:str="full_roster_4_seasons", roster_dir:str=os.getcwd()+"/data/inputs", boolSaveData:bool=True, \
                                 new_read_dir:str=os.getcwd()+"/data/inputs",new_read_name:str=None):
         
+        '''
+        Saves NEW league data to a CSV, for retraining models periodically. 
+
+        Finds difference between past data used for (re-)training and all data now available... i.e. the new data. Then saves the new data for re-training
+
+        Parameters
+        ----
+        old_read_dir: directory for data PREVIOUSLY used in training/testing (CSV)
+
+        old_read_name: filename for same
+
+        save_dir: directory for currently ingested data (a superset of the old data)
+
+        save_name: filename for same
+
+        new_read_dir: location to save just NEW data (difference)
+
+        new_read_name: filename for same
+
+        roster_name: see above
+
+        roster_dir: see above
+
+        boolSaveData: see above
+
+        Returns
+        ----
+        all_rosters: see above
+
+        new_full_df: new game by game data
+        '''
+
         try:
             try:
                 full_df_old = self.saver_reader.read('.csv',old_read_name,old_read_dir,bool_read_s3=False)
