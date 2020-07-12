@@ -56,13 +56,13 @@ This will download the latest data and re-train the model on that data. Note tha
 Note that all commands MUST be run in the root directory of the project.
 
 
-##System Diagrams
+## System Diagrams
 
 The below UML diagrams illustrate the components (classes) and interactions (sequence) in the system.
 
 Firstly, the following class diagram primarily shows that the forecasting models for multiple players implement an interface (Model). There are two multi-player  forecasting models - MultiARIMA and DeepAR. This allows for dynamic dispatch of either type of model selected through the ModelCls string. Note that the MultiARIMA model is an aggregation of multiple models of class ARIMA, where the define ARIMA class wraps the Pyramid ARIMA class.
 
-!(images/SportsCast_Class_Diagram.png?raw=true "Class Diagram")
+![Alt text](images/SportsCast_Class_Diagram.png?raw=true "Class Diagram")
 
 Secondly, the sequence diagrams show four pipelines in the system:
 
@@ -71,7 +71,7 @@ Secondly, the sequence diagrams show four pipelines in the system:
 3. an inference pipeline called using the pred_points() method of PlayerForecaster. (This is served by the deployed model.)
 4. a retraining pipeline called using the retrain_main() method of PlayerForecaster. (This is method is scheduled periodically in the real application by Scheduler.)
 
-!(images/SportsCast_Sequence_Diagram.png?raw=true "Sequence Diagram")
+![Alt text](images/SportsCast_Sequence_Diagram.png?raw=true "Sequence Diagram")
 
 Importantly, the re-/trained model, predictions and re-/training metrics are stored in a pickled DataFrame for persistence. The saving and loading interactions, as well as others, are not shown here for simplicity.
 
