@@ -9,7 +9,7 @@ SportsCast leverages machine learning technology as well as cloud services to pr
 
 ## Use Case
 
-The typical use case for this app is as described on Slide 5 of this [presentation](https://docs.google.com/presentation/d/1TYmXAC4el1T8N4D6sicpDYRG3scOd_jr8fZxCnGjlI4/edit?usp=sharing). Fantasy sport app developers may consume the service as a REST API endpoint.
+The typical use case for this app is as described on Slide 6 of this [presentation](https://docs.google.com/presentation/d/1TYmXAC4el1T8N4D6sicpDYRG3scOd_jr8fZxCnGjlI4/edit?usp=sharing). Fantasy sport app developers may consume the service as a REST API endpoint.
 
 
 ## How to Use
@@ -54,3 +54,25 @@ This will download the latest data and re-train the model on that data. Note tha
 4. Run the prediction command again. You will see that the forecast changes (increases), indicating that the model has been retrained with increased cumulative player points over time.
 
 Note that all commands MUST be run in the root directory of the project.
+
+
+## System Diagrams
+
+The below UML diagrams illustrate the components (classes) and interactions (sequence) in the system.
+
+Firstly, the following class diagram primarily shows that the forecasting models for multiple players implement an interface (Model). There are two multi-player  forecasting models - MultiARIMA and DeepAR. This allows for dynamic dispatch of either type of model selected through the ModelCls string. Note that the MultiARIMA model is an aggregation of multiple models of class ARIMA, where the define ARIMA class wraps the Pyramid ARIMA class.
+
+![Alt text](images/SportsCast_Class_Diagram.png?raw=true "Class Diagram")
+
+Secondly, the sequence diagrams show four pipelines in the system:
+
+1. a training pipeline called using the train() method of TrainingEvaluation
+2. an evaluation pipeline called using the evaluate() method of TrainingEvaluation afterwards
+3. an inference pipeline called using the pred_points() method of PlayerForecaster. (This is served by the deployed model.)
+4. a retraining pipeline called using the retrain_main() method of PlayerForecaster. (This is method is scheduled periodically in the real application by Scheduler.)
+
+![Alt text](images/SportsCast_Sequence_Diagram.png?raw=true "Sequence Diagram")
+
+Importantly, the re-/trained model, predictions and re-/training metrics are stored in a pickled DataFrame for persistence. The saving and loading interactions, as well as others, are not shown here for simplicity.
+
+Note that the above UML diagrams are missing many extraneous details and the names of many methods and variables have been slightly altered for clarity.
