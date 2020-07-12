@@ -22,7 +22,7 @@ class DataIngestion:
         if initial_ingestion:
             self.ingest_league_data(boolSaveData=True)
         
-    def load_season_data(self,save_path:str=os.getcwd()+"/data/inputs",save_name:str='some_data'): #.csv
+    def load_season_data(self,save_path:str=os.getcwd()+"/data/inputs",save_name:str='season_data'): #.csv
         '''
         Saves season data to a CSV
 

@@ -15,7 +15,7 @@ import pdb
 
 #TODO: maybe don't import here? This module could be opaque to model details
 from ARIMA import ARIMA
-import pmdarima as pm       #Only needed here to support legacy saved models. Should remove otherwise to again make module opaque
+import pmdarima as pm       #NOTE: Only needed here to support legacy saved models. Should remove otherwise to again make module opaque
 
 class PlayerForecaster:
     ''' Main class for inference and retraining pipelines '''
@@ -204,10 +204,7 @@ class PlayerForecaster:
         else:
             return False
 
-    '''        
-    def retrain_main(self,hparams:str,updated_data_dir:str=UPDATED_DATA_DIR,updated_data_fname:str=UPDATED_DATA_FILENAME,\
-                    roster_dir:str=ROSTER_DIR, roster_fname:str=ROSTER_FILENAME, load_save_dir:str=RETRAIN_DS_DIR): #TODO: see TrainingEvaluation.train()
-    '''
+    
     #NOTE: up to user to appropriately set whether re-training with or without exogenous features, depending on pre-trained model. In most cases, use_exog_feats=True
     def retrain_main(self,hparams:str, use_exog_feats:bool, roster_dir:str=os.getcwd()+"/data/inputs", roster_fname:str="full_roster_4_seasons", \
                     old_ingest_dir=os.getcwd()+"/data/inputs",old_ingest_name="full_dataset_updated", new_ingest_dir:str=os.getcwd()+"/data/inputs",new_ingest_name:str=None, \

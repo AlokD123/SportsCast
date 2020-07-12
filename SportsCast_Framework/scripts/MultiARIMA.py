@@ -56,7 +56,7 @@ class MultiARIMA(Model):
     Muti-player ARIMA classe: an aggregate class to hold ARIMA models for all players.
     Aggregation allows for intechangeability with other multi-player forecasting classes (e.g. DeepAR), since this also implements the Model interface
     '''
-
+    
     def __init__(self,train_ds_all:ListDataset,model=None,transform:str='none'):
         '''
         Parameters
@@ -110,13 +110,13 @@ class MultiARIMA(Model):
 
             return True   
     
-    def preprocess(self,targets,player_mdl:ARIMA):
+    def preprocess(self,player_train_labels,player_mdl:ARIMA):
         '''
         Helper method to preprocess data for a SINGLE player
 
         Parameters
         ----
-        targets: labels for a single player's training
+        player_train_labels: labels for a single player's training
 
         player_mdl: player's ARIMA model
 
@@ -124,7 +124,7 @@ class MultiARIMA(Model):
         ----
         preprocessed labels for training
         '''
-        return player_mdl.preprocess(targets)
+        return player_mdl.preprocess(player_train_labels)
 
 
     #NOT NEEDED because done during initialization for each player
@@ -167,7 +167,7 @@ class MultiARIMA(Model):
         return ret, actual_targets
 
 
-    def postprocess(self,player_name:str,predictions,targets,intervals=None):
+    def postprocess(self,player_name:str,targets,predictions,intervals=None):
         '''
         Helper method to postprocess data for a SINGLE player
 

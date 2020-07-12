@@ -14,25 +14,31 @@ def reshape_arr_vertical(arr):
 
 class Model(ABC):
     '''
-    Abstract class to specify the interface for a forecasting model in this project.
+    Abstract class to specify the interface for a MULTI_PLAYER forecasting model in this project.
     Allows for intechanging models on-the-fly during training/evaluation (see TrainingEvaluation.py)
     '''
-    def __init__(self):
+    def __init__(self,*args,**kwargs):
         pass
     @abstractmethod
-    def create(self):
+    def create(self,*args,**kwargs):
         pass
     @abstractmethod
-    def preprocess(self,data):
+    def preprocess(self,player_train_labels,*args,**kwargs):
         pass
     @abstractmethod
-    def fit(self,data,labels):
+    def fit(self,*args,**kwargs):
         pass
     @abstractmethod
-    def predict(self,data):
+    def predict(self,num_per,return_conf_int,*args,**kwargs):
         pass
     @abstractmethod
-    def postprocess(self,data):
+    def postprocess(self,targets,predictions,intervals,*args,**kwargs):
+        pass
+    @abstractmethod
+    def evaluate(self,test_ds_all, horizon,*args,**kwargs):
+        pass
+    @abstractmethod
+    def update(self,new_data_ds,*args,**kwargs):
         pass
 
     @classmethod

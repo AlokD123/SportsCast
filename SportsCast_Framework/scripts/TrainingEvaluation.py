@@ -7,9 +7,24 @@ import logging
 import os
 
 
-class TrainingEvaluation():
+class TrainingEvaluation:
 
     def __init__(self,Model_Cls:Model,use_exog_feat:bool,hparams:str="",train_ds_all:ListDataset=None):
+        '''
+        Parameters
+        ----
+        Model_Cls: class of model to train (DeepAR or MultiARIMA). Chosen "on-the-fly"
+
+        use_exog_feat: whether to use exogenous features for training and evaluation
+
+        train_ds_all: training dataset for ALL players
+
+        hparams: string of hyperparameters for naming results with a unique suffix
+
+        Returns
+        ----
+        True if success, None otherwise
+        '''
         self.saver_reader = SavingReading()
         self.Model_Cls = Model_Cls
         self.use_exog_feat = use_exog_feat
