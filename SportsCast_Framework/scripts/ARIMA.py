@@ -7,8 +7,8 @@ from sklearn.preprocessing import PowerTransformer
 
 
 
-class ARIMA(Model): #TODO: decide if inherit Model or pmdarima ARIMA class
-    ''' A class for a player's ARIMA forecasting model. Implements Model interface '''
+class ARIMA:
+    ''' A class for a player's ARIMA forecasting model. '''
 
     def __init__(self,player_train_labels,features_trn=None,model=None,player_name=None,transform:str='none'):
         '''
