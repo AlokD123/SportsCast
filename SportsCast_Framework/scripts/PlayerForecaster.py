@@ -9,6 +9,8 @@ from SavingReading import SavingReading
 from DataLoading import DataLoading
 from DataIngestion import DataIngestion
 
+from typing import List
+
 import logging
 import pdb
 
@@ -112,7 +114,7 @@ class PlayerForecaster:
         String or list of strings with predicted results
 
         '''
-        
+
         #TODO: add test for self.currModel is None
         if self.all_model_results_df is None:
             if not self.load_all_models(models_dir=models_dir,models_filename=models_filename,load_pickled=True):
@@ -120,12 +122,22 @@ class PlayerForecaster:
         if not (self.currPlayer == player_name and (self.currModel is not None)):
             self.currModel = self.getPlayerModel(player_name)
         
-        if self.currModel == None:
+        if self.currModel is None:
             return "No such player found"
+        if isinstance(self.currModel, List) and len(self.currModel)>1: #If accidentally duplicate models saved (NOTE: legacy)
+            self.currModel = self.currModel[0] #Get just the first one
+            logging.warning('Multiple duplicate models found for player. Overwriting df with just one')
+            self.all_model_results_df = self.all_model_results_df.loc[~self.all_model_results_df.index.duplicated(keep='first')]
+            self.saver_reader.save(self.all_model_results_df,self.models_filename,self.models_dir,bool_save_pickle=True,bool_save_s3=False) #Overwrite saved data
 
         predictions, intervals = self.currModel.predict(n_periods=num_games, return_conf_int=True)
         if not isinstance(self.currModel,pm.ARIMA):
             __, predictions, low_intervals, high_intervals = self.currModel.postprocess(train_predictions=None, predictions=predictions, intervals=intervals)
+        else:
+            player_mdl = ARIMA(player_train_labels=None,model=self.currModel,player_name=player_name,transform='none')
+            __, predictions, low_intervals, high_intervals = player_mdl.postprocess(train_predictions=None, predictions=predictions, intervals=intervals)
+            self.all_model_results_df.loc[player_name,'model'] = player_mdl 
+            self.currModel = player_mdl
         assert len(predictions) == num_games, "Issue with model.predict inp/out dims"
 
         if print_single_str:
