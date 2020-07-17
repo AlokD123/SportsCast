@@ -24,16 +24,28 @@ Here, <player_name> is the name of the player for the forecast and <num_games> i
 
 Although this is the expected usage for software developers, for the less programmatically-inclined, the API may be tested using the following (bare-bones) web application: 
 
+http://35.174.184.162:8501/
+
+Note that like the API, this application is only available for a limited time to conserve AWS resources.
+
 
 ## Re-Training
 
-The full model is deployed on an AWS EC2 instance, and has been set up to continuously retrain using updating data provided by the NHL API. However, a simpler model is located in this Git repository (in the data/models directory) to test re-training.
+The full model is deployed on an AWS EC2 instance, and has been set up to continuously retrain using updating data provided by the NHL API. However, a simpler model is located on AWS S3 to test re-training.
 
 Because updating data is not always available, the simple model has been trained using data up until May 2019. It may be retrained using the latest data based on the following steps:
 
-1. Clone the current git repository and recreate conda environment using environment.yml
+1. Clone the current git repository and recreate the conda environment using the provided environment.yml file:
 
-2. In the root directory of the project (SportsCast/), run the command:
+```bash
+conda env create -f environment.yml
+```
+
+2. Download the serialized model weights from the following AWS S3 link and store them in the directory data/models:
+
+  https://insight-prj-bucket.s3.amazonaws.com//home/ubuntu/SportsCast/data/models/simple_model.p
+
+3. In the root directory of the project (SportsCast/), run the command:
 
 ```bash
 python3 SportsCast_Framework/scripts/PlayerForecaster.py pred_points --player_name=“<player_name>” --num_games=<num_games> --models_dir=$(pwd)/data/models --models_filename=“simple_model”
@@ -58,7 +70,7 @@ Note that all commands MUST be run in the root directory of the project.
 
 ## System Diagrams
 
-The below UML diagrams illustrate the components (classes) and interactions (sequence) in the system.
+The below UML diagrams illustrate the components (classes) and interactions (pipelines) in the system. Two of the pipelines - prediction and retraining - can be tested as was described above.
 
 Firstly, the following class diagram primarily shows that the forecasting models for multiple players implement an interface (Model). There are two multi-player  forecasting models - MultiARIMA and DeepAR. This allows for dynamic dispatch of either type of model selected through the ModelCls string. Note that the MultiARIMA model is an aggregation of multiple models of class ARIMA, where the define ARIMA class wraps the Pyramid ARIMA class.
 
