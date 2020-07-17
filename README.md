@@ -70,7 +70,7 @@ Note that all commands MUST be run in the root directory of the project.
 
 ## System Diagrams
 
-The below UML diagrams illustrate the components (classes) and interactions (sequence) in the system.
+The below UML diagrams illustrate the components (classes) and interactions (pipelines) in the system. Two of the pipelines - prediction and retraining - can be tested as was described above.
 
 Firstly, the following class diagram primarily shows that the forecasting models for multiple players implement an interface (Model). There are two multi-player  forecasting models - MultiARIMA and DeepAR. This allows for dynamic dispatch of either type of model selected through the ModelCls string. Note that the MultiARIMA model is an aggregation of multiple models of class ARIMA, where the define ARIMA class wraps the Pyramid ARIMA class.
 
