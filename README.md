@@ -24,7 +24,7 @@ Here, <player_name> is the name of the player for the forecast and <num_games> i
 
 Although this is the expected usage for software developers, for the less programmatically-inclined, the API may be tested using the following (bare-bones) web application: 
 
-http://35.174.184.162:8501/
+http://35.153.78.104:8501/
 
 Note that like the API, this application is only available for a limited time to conserve AWS resources.
 
