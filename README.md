@@ -35,7 +35,7 @@ Like the web application, the API is only available for a limited time to conser
 
 The full model is deployed on an AWS EC2 instance, and has been set up to continuously retrain using updating data provided by the NHL API. However, a simpler model is located on AWS S3 to test re-training.
 
-Because updating data is not always available, the simple model has been trained using data up until May 2019. It may be retrained using the latest data based on the following steps:
+Because new NHL data is not always available, the simple model has been trained using data up until May 2019. It may be retrained using the latest data based on the following steps:
 
 1. Clone the current git repository and recreate the conda environment using the provided environment.yml file:
 
