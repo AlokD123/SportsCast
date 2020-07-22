@@ -28,6 +28,8 @@ curl -i --header "Content-Type: application/json"  --request POST --data '[<play
 
 Here, <player_name> is the name of the player for the forecast and <num_games> is the number of games for which the forecast is to be provided. Specific values should be filled in, e.g. <player_name>="Travis Zajac", <num_games>=10.
 
+Like the web application, the API only available for a limited time to conserve AWS resources.
+
 
 ## Re-Training
 
