@@ -20,7 +20,7 @@ http://100.25.26.181:8501
 
 Note that this application is only available for a limited time to conserve AWS resources.
 
-The expected usage for target users (application developers) is a REST API endpoint. When the API is available, GET requests may be sent in any terminal to obtain the forecast for a player. This is as shown below:
+The expected usage for target users (application developers) is a REST API endpoint. When the API is available, POST requests may be sent in any terminal to obtain the forecast for a player. This is as shown below:
 
 ```bash
 curl -i --header "Content-Type: application/json"  --request POST --data '[<player_name>,<num_games>]' https://ya9k6g79n3.execute-api.us-east-1.amazonaws.com/Prod/predict
