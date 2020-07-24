@@ -14,13 +14,13 @@ The typical use case for this app is as described on Slide 6 of this [presentati
 
 ## How to Use
 
-For the less programmatically-inclined, the API may be tested using the following (bare-bones) web application: 
+One way the API may be tested is using the following (bare-bones) web application: 
 
 http://54.144.151.41:8501
 
 Note that this application is only available for a limited time to conserve AWS resources.
 
-The expected usage for target users (application developers) is a REST API endpoint. When the API is available, POST requests may be sent in any terminal to obtain the forecast for a player. This is as shown below:
+The expected usage for target users (application developers) is as a REST API endpoint. When the API is available, POST requests may be sent in any terminal to obtain the forecast for a player. This is as shown below:
 
 ```bash
 curl -i --header "Content-Type: application/json"  --request POST --data '[<player_name>,<num_games>]' https://ya9k6g79n3.execute-api.us-east-1.amazonaws.com/Prod/predict
