@@ -16,7 +16,7 @@ The typical use case for this app is as described on Slide 6 of this [presentati
 
 For the less programmatically-inclined, the API may be tested using the following (bare-bones) web application: 
 
-http://100.25.26.181:8501
+http://54.144.151.41:8501
 
 Note that this application is only available for a limited time to conserve AWS resources.
 
