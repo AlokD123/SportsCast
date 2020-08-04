@@ -14,26 +14,28 @@ The typical use case for this app is as described on Slide 6 of this [presentati
 
 ## How to Use
 
-When the API has been deployed and is available, GET requests may be sent in any terminal to obtain the forecast for a player. This is as shown below:
+One way the API may be tested is using the following (bare-bones) web application: 
+
+http://54.237.18.0:8501
+
+Note that this application is only available for a limited time to conserve AWS resources.
+
+The expected usage for target users (application developers) is as a REST API endpoint. When the API is available, POST requests may be sent in any terminal to obtain the forecast for a player. This is as shown below:
 
 ```bash
 curl -i --header "Content-Type: application/json"  --request POST --data '[<player_name>,<num_games>]' https://ya9k6g79n3.execute-api.us-east-1.amazonaws.com/Prod/predict
 ```
 
-Here, <player_name> is the name of the player for the forecast and <num_games> is the number of games for which the forecast is to be provided. Specific values should be filled in, e.g. <player_name>="Travis Zajac", <num_games>=10
+Here, <player_name> is the name of the player for the forecast and <num_games> is the number of games for which the forecast is to be provided. Specific values should be filled in, e.g. <player_name>="Travis Zajac", <num_games>=10.
 
-Although this is the expected usage for software developers, for the less programmatically-inclined, the API may be tested using the following (bare-bones) web application: 
-
-http://35.174.184.162:8501/
-
-Note that like the API, this application is only available for a limited time to conserve AWS resources.
+Like the web application, the API is only available for a limited time to conserve AWS resources.
 
 
 ## Re-Training
 
 The full model is deployed on an AWS EC2 instance, and has been set up to continuously retrain using updating data provided by the NHL API. However, a simpler model is located on AWS S3 to test re-training.
 
-Because updating data is not always available, the simple model has been trained using data up until May 2019. It may be retrained using the latest data based on the following steps:
+Because new NHL data is not always available, the simple model has been trained using data up until May 2019. It may be retrained using the latest data based on the following steps:
 
 1. Clone the current git repository and recreate the conda environment using the provided environment.yml file:
 
