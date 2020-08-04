@@ -17,11 +17,29 @@ from bentoml.handlers import DataframeHandler
 @bentoml.env(auto_pip_dependencies=True)
 class Forecast_Service(bentoml.BentoService):
     ''' BentoService class. Server prediction request '''
+    bool_retrain_state = 0 #Status flag for server (1: model retraining in progress, 0: ready-to-infer state)
+
+    @bentoml.api(DataframeHandler, typ='series')
+    def update_state(self, series):
+        '''
+        Updates server state when a periodic retraining event occurs
+
+        Parameters
+        ----
+        series: Pandas series, with indices as per this dict (key=type, value=index)
+        
+        {"bool_retrain_state":0}
+        '''
+        try:        
+            type(self).bool_retrain_state = series[0]
+            return True
+        except Exception as err:
+            return f'Error updating server state: {err}'
 
     @bentoml.api(DataframeHandler, typ='series')
     def predict(self, series):
         '''
-        Serves prediction request 
+        Serves prediction request, depending on status flag
 
         Parameters
         ----
@@ -29,8 +47,11 @@ class Forecast_Service(bentoml.BentoService):
         
         {"player_name":0, 
           "num_games":1}
-        '''        
-        return self.artifacts.model.pred_points(series[0],series[1])
+        '''
+        if not type(self).bool_retrain_state:        
+            return self.artifacts.model.pred_points(series[0],series[1])
+        else:
+            return f'Retraining in progress. Please wait.'
 
 def create_service(models_dir:str=os.getcwd()+"/data/models", models_fname:str="model_results", bento_dir:str=os.getcwd()+"/serve/bentoml"):
     
