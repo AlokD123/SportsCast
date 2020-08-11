@@ -1,5 +1,5 @@
 import streamlit as st
-from PlayerForecaster import PlayerForecaster
+from .PlayerForecaster import PlayerForecaster
 import os
 
 if __name__=="__main__":

@@ -1,11 +1,11 @@
 import pandas as pd
-from Model import Model
-from ARIMA import ARIMA
+from .Model import Model
+from .ARIMA import ARIMA
 from gluonts.dataset.field_names import FieldName
 from gluonts.dataset.common import ListDataset
 import pdb
 import logging
-from Evaluate import Evaluator
+from .Evaluate import Evaluator
 import numpy as np
 
 
@@ -199,7 +199,7 @@ class MultiARIMA(Model):
             self.models_results_df.loc[player_name,"intervalHigh"] = proc_int_high
         if (targets is not None) and (len(targets)>0):
             _, proc_targets, _ = player_mdl.postprocess(predictions=targets)
-            self.models_results_df.loc[player_name,"test_targets_unscaled"] = proc_targets  #TODO: add dedicated field for test_targets_unscaled OR don't preprocess in glnts.prep_df
+            self.models_results_df.loc[player_name,"test_targets_unscaled"] = proc_targets  #TODO: add dedicated field for test_targets_unscaled OR don't preprocess in glnts.py
 
         return proc_predictions,proc_int_low,proc_int_high,proc_targets
 

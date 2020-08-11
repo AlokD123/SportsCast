@@ -1,4 +1,4 @@
-from Model import Model
+from .Model import Model
 import mxnet as mx
 from mxnet import gluon
 from gluonts.trainer import Trainer

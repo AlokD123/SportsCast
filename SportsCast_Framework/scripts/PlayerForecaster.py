@@ -4,10 +4,10 @@ import os
 import pickle
 from gluonts.dataset.field_names import FieldName
 from gluonts.dataset.common import ListDataset
-from SavingReading import SavingReading
+from .SavingReading import SavingReading
 
-from DataLoading import DataLoading
-from DataIngestion import DataIngestion
+from .DataLoading import DataLoading
+from .DataIngestion import DataIngestion
 
 from typing import List
 
@@ -16,7 +16,7 @@ import pdb
 
 
 #TODO: maybe don't import here? This module could be opaque to model details
-from ARIMA import ARIMA
+from .ARIMA import ARIMA
 import pmdarima as pm       #NOTE: Only needed here to support legacy saved models. Should remove otherwise to again make module opaque
 
 class PlayerForecaster:

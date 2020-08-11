@@ -4,8 +4,7 @@ import logging
 import fire
 import pdb
 
-from PlayerForecaster import PlayerForecaster
-
+from .PlayerForecaster import PlayerForecaster
 
 import bentoml
 from bentoml.artifact import PickleArtifact

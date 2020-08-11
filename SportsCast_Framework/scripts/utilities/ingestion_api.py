@@ -1,5 +1,5 @@
 """
-Module for interacting with the NHL's open but undocumented API.
+Module for interacting with the NHL's open but undocumented API (ingesting data)
 """
 #import streamlit as st
 import pandas as pd
@@ -250,10 +250,10 @@ def get_player_name_position(player_id=8477934, streamlit=False):
 def assemble_multiplayer_stat_dataframe(player_id_list=None, season_id_list=None,
                                         stat_list=None, shape='cols', boolAddSimulated=False):
     """returns game-by-game stats for given list of players across given seasons
-       (can specify sspecific stats for smaller returns)"""
+       (can specify specific stats for smaller returns)"""
     if stat_list is None:
         stat_list = ['cumStatpoints']
-    if player_id_list is None:
+    if player_id_list is None or len(player_id_list)==0:
         player_id_list = [8477934, 8476356, 8473468]
     if season_id_list is None:
         season_id_list = [20152016, 20162017, 20172018, 20182019]
@@ -263,33 +263,24 @@ def assemble_multiplayer_stat_dataframe(player_id_list=None, season_id_list=None
         if player_position == 'G':
             continue # don't include goalies
         if len(season_id_list) == 1: # handle single or multiple season input lists
-            player_df = augment_player_dataframe(
-                get_player_season_game_stats(
-                    player_id=player_id, season_id=season_id_list[0]))
+            player_df = augment_player_dataframe( get_player_season_game_stats(player_id=player_id, season_id=season_id_list[0]) )
         elif boolAddSimulated:
-            player_df = augment_player_dataframe(
-                augment_combined_player_season_game_stats(
-                    player_id=player_id, season_id_list=season_id_list))
+            player_df = augment_player_dataframe( augment_combined_player_season_game_stats(player_id=player_id, season_id_list=season_id_list) )
         else:
-            player_df = augment_player_dataframe(
-                get_combined_player_season_game_stats(
-                    player_id=player_id, season_id_list=season_id_list))
+            player_df = augment_player_dataframe( get_combined_player_season_game_stats(player_id=player_id, season_id_list=season_id_list) )
         #IF NO DATA ON PLAYER, skip
         if (player_df is None) or (len(player_df)==0):
             continue
         if stat_list: # if a specific stat is given, only grab that
-            player_small_df = player_df \
-                                       .loc[:, ['date', 'gameNumber'] \
-                                                + stat_list] # keep the useful indices
+            player_small_df = player_df.loc[:, ['date', 'gameNumber'] + stat_list] # keep the useful indices
         else:
             player_small_df = player_df # grab it all otherwise
         player_small_df.reset_index(drop=True, inplace=True) # get rid of messy index
         try:
             player_small_df.insert(0, 'name', [player_name for _ in range(len(player_small_df))]) #Create first column of player names
         except ValueError: # still don't know why this is thrown sometimes
-            st.dataframe(player_small_df)
-            player_small_df.insert(0, 'errorName',
-                                   [player_name for _ in range(len(player_small_df))])
+            #st.dataframe(player_small_df)
+            player_small_df.insert(0, 'errorName', [player_name for _ in range(len(player_small_df))] )
         # player_small_df.set_index('gameNumber', inplace=True)
         # player_small_df.rename(columns={stat: player_name}, inplace=True)
         multiplayer_df = pd.concat([multiplayer_df, player_small_df], axis=0)

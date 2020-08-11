@@ -1,8 +1,8 @@
-from SavingReading import SavingReading
+from .SavingReading import SavingReading
 from gluonts.dataset.field_names import FieldName
 from gluonts.dataset.common import ListDataset
-from Model import Model
-from MultiARIMA import MultiARIMA
+from .Model import Model
+from .MultiARIMA import MultiARIMA
 import logging
 import os
 
@@ -34,7 +34,7 @@ class TrainingEvaluation:
         self.hparams = hparams
 
     def train(self,train_ds_dir:str=os.getcwd()+"/data/train_ds",train_ds_fname:str="train_ds_all", \
-                model_train_dir:str=os.getcwd+"/data/models/trained", model_train_save_filename:str="model_trained", \
+                model_train_dir:str=os.getcwd()+"/data/models/trained", model_train_save_filename:str="model_trained", \
                 trn_params_sffix:str=""):
         '''
         Parameters
@@ -76,9 +76,9 @@ class TrainingEvaluation:
         return True
 
 
-    def evaluate(self,model_train_dir:str=os.getcwd+"/data/models/trained", model_train_save_filename:str="model_trained",\
+    def evaluate(self,model_train_dir:str=os.getcwd()+"/data/models/trained", model_train_save_filename:str="model_trained",\
                 test_ds_dir:str=os.getcwd()+"/data/test_ds",test_ds_fname:str="test_ds_all",\
-                modelresult_dir:str=os.getcwd+"/data/models", modelresult_filename:str="model_results",
+                modelresult_dir:str=os.getcwd()+"/data/models", modelresult_filename:str="model_results",
                 test_params_sffix:str="", retrain_horizon:int=0):
         '''
         Parameters

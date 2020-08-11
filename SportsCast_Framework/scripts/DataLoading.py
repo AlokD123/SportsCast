@@ -1,11 +1,10 @@
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 import copy
-import glnts
+from .utilities import feats_api as glnts
 import pickle
 import pandas as pd
-#from Preprocessing import Preprocessing
-from SavingReading import SavingReading
+from .SavingReading import SavingReading
 import logging
 
 

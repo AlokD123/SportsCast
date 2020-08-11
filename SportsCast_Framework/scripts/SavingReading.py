@@ -215,7 +215,7 @@ class SavingReading:
 
         Returns
         ---
-        Success boolean (True if success, False if fail, None if error)
+        Object read if success, False if failure, None if error
         '''
         logging.debug(f"Arguments:\nfile_ext: {file_ext},\nread_name={read_name},\nfull_read_dir={full_read_dir},\npickle_obj_cls={pickle_obj_cls},\nbool_read_s3={bool_read_s3}")
         if file_ext == ".csv":

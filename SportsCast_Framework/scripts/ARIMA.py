@@ -1,4 +1,4 @@
-from Model import Model
+from .Model import Model
 import pmdarima as pm
 import pdb
 import logging

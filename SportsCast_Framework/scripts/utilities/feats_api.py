@@ -1,5 +1,5 @@
 """
-Module for working with GluonTS and models from it
+Module for working with GluonTS and preprocessing data for features
 """
 import itertools
 from pathlib import Path
