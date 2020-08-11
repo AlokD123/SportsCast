@@ -6,12 +6,18 @@ Specifically, it is a forecasting service that helps both new and experienced fa
 
 SportsCast leverages machine learning technology as well as cloud services to provide game-by-game, up-to-date forecasts. The end-users of this service are targeted to be fantasy sport application developers, who may integrate the forecasting feature to improve user-engagement for their apps.
 
+1. <a href="#usecase">Use Case</a>
+2. <a href="#usage">How to Use</a>
+3. <a href="#retraining">Re-Training</a>
+4. <a href="#system">System Diagrams</a>
+5. <a href="#testing">Unit Testing</a>
 
+<a id="usecase"></a>
 ## Use Case
 
-The typical use case for this app is as described on Slide 6 of this [presentation](https://docs.google.com/presentation/d/1TYmXAC4el1T8N4D6sicpDYRG3scOd_jr8fZxCnGjlI4/edit?usp=sharing). Fantasy sport app developers may consume the service as a REST API endpoint.
+The typical use case for this app is as illustrated on Slide 6 of this [presentation](https://docs.google.com/presentation/d/1TYmXAC4el1T8N4D6sicpDYRG3scOd_jr8fZxCnGjlI4/edit?usp=sharing). Fantasy sport app developers may consume the service as a REST API endpoint.
 
-
+<a id="usage"></a>
 ## How to Use
 
 One way the API may be tested is using the following (bare-bones) web application: 
@@ -30,7 +36,7 @@ Here, <player_name> is the name of the player for the forecast and <num_games> i
 
 Like the web application, the API is only available for a limited time to conserve AWS resources.
 
-
+<a id="retraining"></a>
 ## Re-Training
 
 The full model is deployed on an AWS EC2 instance, and has been set up to continuously retrain using updating data provided by the NHL API. However, a simpler model is located on AWS S3 to test re-training.
@@ -69,7 +75,7 @@ This will download the latest data and re-train the model on that data. Note tha
 
 Note that all commands MUST be run in the root directory of the project.
 
-
+<a id="system"></a>
 ## System Diagrams
 
 The below UML diagrams illustrate the components (classes) and interactions (pipelines) in the system. Two of the pipelines - prediction and retraining - can be tested as was described above.
@@ -90,3 +96,12 @@ Secondly, the sequence diagrams show four pipelines in the system:
 Importantly, the re-/trained model, predictions and re-/training metrics are stored in a pickled DataFrame for persistence. The saving and loading interactions, as well as others, are not shown here for simplicity.
 
 Note that the above UML diagrams are missing many extraneous details and the names of many methods and variables have been slightly altered for clarity.
+
+<a id="testing"></a>
+## Unit Testing
+To verify that all tests pass, switch to the branch 'exception_handling_testing' and run the command:
+```bash
+python3 -m tests.test_DataIngestion
+```
+
+You should see the output of the unittest module, which is 'OK' when all tests pass. Note that intermediary errors may be ignored as they are internal to the system and required when testing all edge cases.
