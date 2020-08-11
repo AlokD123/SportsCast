@@ -22,7 +22,7 @@ The typical use case for this app is as illustrated on Slide 6 of this [presenta
 
 One way the API may be tested is using the following (bare-bones) web application: 
 
-http://54.237.18.0:8501
+http://34.207.154.134:8501
 
 Note that this application is only available for a limited time to conserve AWS resources.
 
