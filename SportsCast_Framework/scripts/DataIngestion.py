@@ -1,10 +1,13 @@
-import api as api
+from .utilities import ingestion_api as api
+from .utilities import constants
 import pandas as pd
 import time
-from SavingReading import SavingReading
+from .SavingReading import SavingReading
 import os
 import pdb
 import logging
+
+from typing import List
 
 
 class DataIngestion:
@@ -41,9 +44,11 @@ class DataIngestion:
         self.saver_reader.save(df,save_name,save_path)
         
     #TODO: implement updating roster each season
-    def ingest_league_data(self,save_dir:str=os.getcwd()+"/data/inputs",save_name:str="full_dataset_updated", roster_name:str="full_roster_4_seasons", roster_dir:str=os.getcwd()+"/data/inputs", boolSaveData:bool=True): #.csv
+    def ingest_league_data(self,save_dir:str=os.getcwd()+"/data/inputs",save_name:str="full_dataset_updated", \
+                            roster_name:str="full_roster_4_seasons", roster_dir:str=os.getcwd()+"/data/inputs", \
+                            boolSaveData:bool=True, season_id_list:List[int]=[20152016, 20162017, 20172018, 20182019]): #.csv
         '''
-        Saves league game data and roster data to a CSV for training and testing models
+        Saves league game data and roster data to a CSV for training and testing models. GREEDILY ingests as much data as is available (up to the present season)
 
         Parameters
         ----
@@ -57,31 +62,40 @@ class DataIngestion:
 
         boolSaveData: whether to save
 
+        season_id_list: list of seasons for which to get data. Provides a starting season for ingestion, even though ultimately greedy
+
         Returns
         ----
         all_rosters: list of all rosters for all teams during the seasons in season_id_list
 
         full_df: game by game data during the seasons in season_id_list
         '''
-        season_id_list = [20152016, 20162017, 20172018, 20182019]           #TODO: make user-defined
         all_rosters = api.get_all_rosters(season_id_list=season_id_list)
+        full_df = None
 
-        full_df = api.assemble_multiplayer_stat_dataframe(player_id_list=list(all_rosters.index), boolAddSimulated=False, season_id_list=season_id_list)
-        test_season = season_id_list[-1] + 10001 #Try getting next season
         try:
+            full_df = api.assemble_multiplayer_stat_dataframe(player_id_list=list(all_rosters.index), boolAddSimulated=False, season_id_list=season_id_list)
+            if len(full_df)==0:
+                raise Exception(f"Data unavailable for one of the following seasons: {season_id_list}")
+            test_season = season_id_list[-1] + constants.SEASON_ID_DIFF #Try getting next season ID (ID of current + ID difference)
             while True:
                 df = api.assemble_multiplayer_stat_dataframe(player_id_list=list(all_rosters.index), boolAddSimulated=False, season_id_list=[test_season])
+                if len(full_df)==0:
+                    raise Exception(f"Data unavailable for season {test_season}")
                 full_df = pd.concat([full_df,df],ignore_index=True)
-                test_season = test_season + 10001 #Try getting next season
-        except Exception as err:
-            logging.error(f'Data for {test_season} not available: {err}')
-        if boolSaveData:
-            self.saver_reader.save(full_df,save_name,save_dir,bool_save_s3=False)
-            self.saver_reader.save(all_rosters,roster_name,roster_dir,bool_save_s3=False)
+                test_season = test_season + constants.SEASON_ID_DIFF #Try getting next season (ID of current + ID difference)
+            
+            if boolSaveData:
+                self.saver_reader.save(full_df,save_name,save_dir,bool_save_s3=False)
+                self.saver_reader.save(all_rosters,roster_name,roster_dir,bool_save_s3=False)
 
-        #Store last ingestion time
-        dates = full_df.sort_values(by=['date'],axis='rows')['date']
-        self.last_ingestion_time = list(dates.tail(1))[0]
+            #Store last ingestion time
+            dates = full_df.sort_values(by=['date'],axis='rows')['date']
+            self.last_ingestion_time = list(dates.tail(1))[0]
+
+        except Exception as err: #If season not found
+            logging.error(f'Error ingesting game-by-game data: {err}')
+
         return all_rosters,full_df
             
     def ingest_new_league_data(self,old_read_dir:str=os.getcwd()+"/data/inputs",old_read_name:str="full_dataset_updated", \
@@ -100,11 +114,11 @@ class DataIngestion:
 
         old_read_name: filename for same
 
-        save_dir: directory for currently ingested data (a superset of the old data)
+        save_dir: location to save just NEW data (difference)
 
-        save_name: filename for same
+        save_name: filename for same. Should be EQUAL to old_read_name to avoid iterative data storage
 
-        new_read_dir: location to save just NEW data (difference)
+        new_read_dir: directory for currently ingested data (a superset of the old data)
 
         new_read_name: filename for same
 
@@ -126,29 +140,31 @@ class DataIngestion:
                 full_df_old = self.saver_reader.read('.csv',old_read_name,old_read_dir,bool_read_s3=False)
                 all_rosters = self.saver_reader.read('.csv',roster_name,roster_dir,bool_read_s3=False)
             except AssertionError as err:
-                logging.error(f'Error reading old data: {err}. Downloading latest')
+                logging.error(f'Error reading old data: {err}. Downloading latest') #NOTE: if this error arises, must train from scratch
                 all_rosters,full_df = self.ingest_league_data(save_dir=save_dir,save_name=save_name,roster_name=roster_name, roster_dir=roster_dir)
                 return all_rosters,full_df
-            #Get latest
+            #Get last ingestion time, for comparison to get just latest
             if self.last_ingestion_time is None:
                 old_dates = full_df_old.sort_values(by=['date'],axis='rows')['date']
                 self.last_ingestion_time = list(old_dates.tail(1))[0]
             old_last_ingestion_time = self.last_ingestion_time
 
             #Two ways to get updated data
-            if new_read_dir is not None and new_read_name is not None: #1) Try to read new data saved in a CSV
+            if new_read_dir is not None and new_read_name is not None: #1) Try to read the current data (superset of old data) from a CSV
                 try:
                     full_df = self.saver_reader.read('.csv',new_read_name,new_read_dir,bool_read_s3=False)
                 except Exception as err:
                     logging.error(f'Error in reading new data saved to specified path: {err}. Will try to ingest new data from online')
                     __,full_df = self.ingest_league_data(save_dir=save_dir,save_name=save_name, roster_name=roster_name, roster_dir=roster_dir)
             else:
-                __,full_df = self.ingest_league_data(save_dir=save_dir,save_name=save_name, roster_name=roster_name, roster_dir=roster_dir) #2) Try to ingest by downloading from online
+                __,full_df = self.ingest_league_data(save_dir=save_dir,save_name=save_name, roster_name=roster_name, roster_dir=roster_dir) #2) Try to ingest latest by downloading from online
             #Discard old dates
             new_full_df = full_df[full_df['date']>old_last_ingestion_time]
             
-            #Overwrite old data with new in SAME file (to avoid iterative data storage)
-            if boolSaveData:
+            #If new data available, overwrite old data with new
+            if len(new_full_df)==0:
+                logging.info("No new data available!")
+            if boolSaveData and len(new_full_df)>0:
                 self.saver_reader.save(new_full_df,save_name,save_dir,bool_save_s3=False)
                 logging.info("Overwrote with new data")
             return all_rosters, new_full_df
